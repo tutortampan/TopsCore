@@ -2,7 +2,7 @@ import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, au
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { openTestBuilder } from './test-builder.js?v=20261106_v160';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
-import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261109_v172';
+import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261127_v693';
 import { openCrudModal } from './crud-modals.js?v=20261115_v528';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
@@ -90,6 +90,16 @@ window.handleAddPlacement = (classId, className) => {
   }
 };
 window.handleAddTryout = window.handleAddPlacement;
+
+/** OPEN TEST BUILDER — opens class-aware Test Builder (Task, Exam, Quiz, Pre-Test, Try-Out) */
+window.handleOpenClassTestBuilder = (classId, className) => {
+  const type = detectClassType(className);
+  if (type === 'VOCABULARY') {
+    openVocabWizard(null, { classId, className, testType: 'VOCAB_MASTERY' });
+  } else {
+    openTestBuilder(null, classId);
+  }
+};
 
 /** @deprecated — Use handleAddQuiz / handleAddExam instead */
 window.handleCreateClassTest = (classId, className) => {
@@ -538,6 +548,10 @@ function renderClassDetail(cls) {
                Sync Phrases (Dropdown 10)
              </button>
            ` : ''}
+           <button class="btn btn-primary btn-sm" onclick="window.handleOpenClassTestBuilder('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
+             style="background:var(--primary-tactical, #38bdf8); color:#090D16; border:1px solid rgba(56,189,248,0.6); font-weight:800;" title="Open Test Builder (Task, Exam, Quiz, Pre-Test, Try-Out)">
+             ${getSvgIcon('plus', 13)} Test Builder
+           </button>
            <button class="btn btn-primary btn-sm edit-mode-only" onclick="window.handleAddTask('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(245,158,11,0.9); color:#1a1a1a; border:1px solid rgba(245,158,11,0.4); font-weight:700;">
              Add Task

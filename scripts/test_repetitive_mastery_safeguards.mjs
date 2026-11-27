@@ -298,4 +298,50 @@ assert.strictEqual(apiVersions.size, 1, `All js/admin/*.js modules MUST share a 
 
 console.log('  ✔ Pillar 8: MANUAL_REPS pass-count preservation & unified admin api.js cache version strictly verified');
 
-console.log('\n✅ ALL 8 REPETITIVE MASTERY & EXAM ISOLATION SAFEGUARDS PASSED WITH 100% SUCCESS!\n');
+// ============================================================
+// 9. UNIFIED VS WORDS-ONLY CAPABILITY SSOT SAFEGUARD
+// ============================================================
+const { resolveTestCapabilities } = await import('../js/grading.js');
+
+const evnkCap = resolveTestCapabilities(
+  { shell_code: 'EVNK-VCB-0G1-TASK', payload: { is_unified: true, words_reps: 3 } },
+  { code: 'EVNK-VOCAB', name: 'Evnikom Vocabulary' },
+  { taskRepetitions: 3 }
+);
+assert.strictEqual(evnkCap.isUnified, false, 'EVNK-VOCAB must NEVER resolve as unified even if payload.is_unified=true');
+assert.strictEqual(evnkCap.hasPhrases, false, 'EVNK-VOCAB must have hasPhrases=false');
+assert.strictEqual(evnkCap.phrasesTarget, 0, 'EVNK-VOCAB must have phrasesTarget=0');
+
+const zeroPhrCap = resolveTestCapabilities(
+  { shell_code: 'CUSTOM-VCB-TASK', payload: { is_unified: true, words_reps: 5, phrases_reps: 0 } },
+  { code: 'CUSTOM-VOCAB', name: 'Custom Vocabulary' }
+);
+assert.strictEqual(zeroPhrCap.isUnified, false, 'phrases_reps=0 test must NEVER resolve as unified');
+assert.strictEqual(zeroPhrCap.hasPhrases, false, 'phrases_reps=0 test must have hasPhrases=false');
+
+const campUniCap = resolveTestCapabilities(
+  { shell_code: 'CAMP-VCB-1A1-TASK', payload: { is_unified: true, words_reps: 7, phrases_reps: 7 } },
+  { code: 'CAMP-1VOCAB', name: '1st Step Vocabulary' }
+);
+assert.strictEqual(campUniCap.isUnified, true, 'Unified CEC Vocabulary test with words+phrases must resolve isUnified=true');
+assert.strictEqual(campUniCap.hasWords, true, 'Unified CEC Vocabulary test must have hasWords=true');
+assert.strictEqual(campUniCap.hasPhrases, true, 'Unified CEC Vocabulary test must have hasPhrases=true');
+assert.strictEqual(campUniCap.wordsTarget, 7);
+assert.strictEqual(campUniCap.phrasesTarget, 7);
+
+const nonVocabCap = resolveTestCapabilities(
+  { shell_code: 'CAMP-1SPK-1A1-TASK', payload: {} },
+  { code: 'CAMP-1SPK', name: '1st Step Speaking' }
+);
+assert.strictEqual(nonVocabCap.isUnified, false, 'Non-vocab test must have isUnified=false');
+assert.strictEqual(nonVocabCap.hasPhrases, false, 'Non-vocab test must have hasPhrases=false');
+
+const resultContent = fs.readFileSync('js/result.js', 'utf8');
+const testJsContent = fs.readFileSync('js/test.js', 'utf8');
+assert(dashboardContent.includes('resolveTestCapabilities'), 'dashboard.js must use SSOT resolveTestCapabilities');
+assert(resultContent.includes('resolveTestCapabilities'), 'result.js must use SSOT resolveTestCapabilities');
+assert(testJsContent.includes("requestedSection === 'phrases' && hasPhraseRows"), 'test.js must guard section=phrases against tests with no phrase rows');
+
+console.log('  ✔ Pillar 9: Unified vs Words-Only capability SSOT & section=phrases guard strictly verified');
+
+console.log('\n✅ ALL 9 REPETITIVE MASTERY & EXAM ISOLATION SAFEGUARDS PASSED WITH 100% SUCCESS!\n');

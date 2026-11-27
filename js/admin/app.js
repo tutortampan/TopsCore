@@ -401,7 +401,7 @@ import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows
 import { setAdminSession, getAdminSession, clearAdminSession, isTutorRole, isAdminRole, getAdminRole } from '../session.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261123_v677';
-import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261114_v465';
+import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261127_v693';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261121_v665';
 import { renderResults } from './class.js?v=20261116_v572';
 import { renderTests } from './tests-management.js?v=20261121_v665';
@@ -418,7 +418,7 @@ import { renderClassMeetingsAttendance, getMeetingsConfigForClass } from './clas
 import { renderExportQuestions } from './imports-exports.js?v=20261106_v160';
 import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261115_v528';
 import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
-import { renderClassesHub } from './classes-hub.js?v=20261124_v680';
+import { renderClassesHub } from './classes-hub.js?v=20261127_v693';
 import { renderDashboard } from './admin-deck.js?v=20261121_v655';
 import { openStudentFullEdit } from './student-management.js?v=20261123_v677';
 import { renderStudentsRegistration } from './student-registration.js?v=20261120_v640';
@@ -2535,11 +2535,15 @@ if (typeof window !== 'undefined') {
                 ${isEditOn ? '<span class="badge" style="background:rgba(56,189,248,0.18); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); font-size:11px; font-weight:700;">EDIT MODE ACTIVE</span>' : ''}
               </div>
             `;
+            const safeClsId = escapeHtml(classId || cid || '');
+            const safeClsName = escapeHtml(className || currentClass?.name || '').replace(/'/g, "\\'");
+            const testBuilderBtn = `<button type="button" class="btn btn-primary btn-sm" id="btn-class-hub-test-builder" onclick="window.handleOpenClassTestBuilder('${safeClsId}', '${safeClsName}')" style="height:30px !important; line-height:28px !important; padding:0 12px !important; font-size:12px !important; font-weight:800; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; background:var(--primary-tactical, #38bdf8); border:1px solid #38bdf8; color:#090d16;" title="Open Test Builder (Task, Exam, Quiz, Pre-Test, Try-Out)">${getSvgIcon('plus', 14)} Test Builder</button>`;
             const rightHtml = isVocab ? `
               <div class="class-tests-actions-cluster" style="display:inline-flex; align-items:center; gap:8px;">
                 <button type="button" class="btn btn-sm" id="btn-class-tests-toggle-edit" onclick="window.toggleClassTestsEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Table Editing &amp; Delete)">
                   ${editBtnLabel}
                 </button>
+                ${testBuilderBtn}
                 <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-class-tests" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer;" title="Sync tests for this class with Vocabulary Vault themes &amp; topics">
                   ${getSvgIcon('refresh', 14)} Sync Tests
                 </button>
@@ -2552,6 +2556,7 @@ if (typeof window !== 'undefined') {
                 <button type="button" class="btn btn-sm" id="btn-class-tests-toggle-edit" onclick="window.toggleClassTestsEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Table Editing &amp; Delete)">
                   ${editBtnLabel}
                 </button>
+                ${testBuilderBtn}
                 <button type="button" class="btn btn-secondary btn-sm" onclick="window.renderClassHub(document.getElementById('admin-content-area'))" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer;" title="Refresh Class Tests">
                   ${getSvgIcon('refresh', 14)} Refresh Tests
                 </button>
@@ -2751,18 +2756,6 @@ if (typeof window !== 'undefined') {
                 }
               },
               {
-                key: 'prereq',
-                label: 'PREREQUISITE',
-                sortable: true,
-                width: '205px',
-                align: 'center',
-                render: (val, row) => {
-                  const prereqDisplay = row.prereq || '';
-                  if (!prereqDisplay) return '<span class="text-muted" style="font-size:12px; font-weight:500;">—</span>';
-                  return `<span style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(prereqDisplay)}">${escapeHtml(prereqDisplay)}</span>`;
-                }
-              },
-              {
                 key: 'TestCategory',
                 label: 'TYPE',
                 sortable: true,
@@ -2777,12 +2770,24 @@ if (typeof window !== 'undefined') {
                 }
               },
               {
+                key: 'prereq',
+                label: 'PREREQUISITE',
+                sortable: true,
+                width: '205px',
+                align: 'center',
+                render: (val, row) => {
+                  const prereqDisplay = row.prereq || '';
+                  if (!prereqDisplay) return '<span class="text-muted" style="font-size:12px; font-weight:500;">—</span>';
+                  return `<span style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(prereqDisplay)}">${escapeHtml(prereqDisplay)}</span>`;
+                }
+              },
+              {
                 key: 'repetitions',
-                label: 'REPETITIONS',
+                label: 'REPS',
                 shortLabel: 'REPS',
                 microLabel: 'REP',
                 sortable: true,
-                width: '85px',
+                width: '70px',
                 align: 'center',
                 render: (val, row) => {
                   const isExam = String(row.TestCategory || '').toLowerCase().includes('exam');
@@ -2791,25 +2796,6 @@ if (typeof window !== 'undefined') {
                   }
                   const rCount = row.repetitions || 7;
                   return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${rCount}x Repetitions Target">${rCount}x</span>`;
-                }
-              },
-              {
-                key: 'questionOrder',
-                label: 'ORDER',
-                sortable: true,
-                width: '85px',
-                align: 'center',
-                render: (val, row) => {
-                  const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
-                  const isRand = String(row.questionOrder || '').toLowerCase().includes('rand');
-                  if (isEditOn) {
-                    return `<select class="form-control form-control-sm select-test-order" data-test-id="${row.id}" style="height:24px !important; font-size:12px; font-weight:600; width:100%; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:${isRand ? '#38bdf8' : '#94a3b8'}; padding:0 4px; box-sizing:border-box;">
-                      <option value="random" ${isRand ? 'selected' : ''}>Random</option>
-                      <option value="sequential" ${!isRand ? 'selected' : ''}>Sequential</option>
-                    </select>`;
-                  }
-                  const accessLabel = isRand ? 'Random' : 'Sequential';
-                  return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500;">${accessLabel}</span>`;
                 }
               },
               {
@@ -2837,6 +2823,25 @@ if (typeof window !== 'undefined') {
                     </div>`;
                   }
                   return `<span style="font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; color:${passColor};">${currentMin}%</span>`;
+                }
+              },
+              {
+                key: 'questionOrder',
+                label: 'ORDER',
+                sortable: true,
+                width: '85px',
+                align: 'center',
+                render: (val, row) => {
+                  const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
+                  const isRand = String(row.questionOrder || '').toLowerCase().includes('rand');
+                  if (isEditOn) {
+                    return `<select class="form-control form-control-sm select-test-order" data-test-id="${row.id}" style="height:24px !important; font-size:12px; font-weight:600; width:100%; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:${isRand ? '#38bdf8' : '#94a3b8'}; padding:0 4px; box-sizing:border-box;">
+                      <option value="random" ${isRand ? 'selected' : ''}>Random</option>
+                      <option value="sequential" ${!isRand ? 'selected' : ''}>Sequential</option>
+                    </select>`;
+                  }
+                  const accessLabel = isRand ? 'Random' : 'Sequential';
+                  return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500;">${accessLabel}</span>`;
                 }
               },
               {
@@ -7515,6 +7520,11 @@ if (typeof window !== 'undefined') {
           </div>
         </div>
         <div class="dashboard-grid mt-4">
+          <div class="stat-card" style="cursor:pointer;" onclick="window.handleOpenClassTestBuilder && window.handleOpenClassTestBuilder('${escapeHtml(cid)}', '${escapeHtml(cname).replace(/'/g, "\\'")}')">
+            <div class="stat-icon">${getSvgIcon('plus', 24)}</div>
+            <div class="stat-value">Test Builder</div>
+            <div class="stat-label">Generate Task, Exam, Quiz & Pre-Test</div>
+          </div>
           <div class="stat-card" style="cursor:pointer;" onclick="window.loadSection('tests')">
             <div class="stat-icon">${getSvgIcon('file-text', 24)}</div>
             <div class="stat-value">Manage Tests</div>

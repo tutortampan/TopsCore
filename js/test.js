@@ -1266,7 +1266,8 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           }
         };
 
-        if (requestedSection === 'words' || requestedSection === 'phrases') {
+        const hasPhraseRows = allAnswerRows.some(r => isPhraseRowUnified(r));
+        if (requestedSection === 'words' || (requestedSection === 'phrases' && hasPhraseRows)) {
           await applySectionFilter(requestedSection);
         }
 
@@ -2749,8 +2750,90 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         }
       }
       updateNavGrid();
+      bindQuestionSwipeNavigation(main);
+
+      if (window._pendingSwipeDir && main) {
+        const dirClass = window._pendingSwipeDir === 'next' ? 'tc-swipe-in-next' : 'tc-swipe-in-prev';
+        window._pendingSwipeDir = null;
+        main.querySelectorAll('.question-box-prompt, #answer-container-written, #speech-answer-container, #answer-container-mc, #answer-container-chips').forEach((el) => {
+          el.classList.remove('tc-swipe-in-next', 'tc-swipe-in-prev');
+          void el.offsetWidth;
+          el.classList.add(dirClass);
+        });
+      }
     }
     window.renderQuestion = renderQuestion;
+
+    function triggerSwipeEdgeBump(el, dir) {
+      if (!el) return;
+      const cls = dir === 'left' ? 'tc-swipe-edge-left' : 'tc-swipe-edge-right';
+      el.classList.remove('tc-swipe-edge-left', 'tc-swipe-edge-right');
+      void el.offsetWidth;
+      el.classList.add(cls);
+    }
+
+    /**
+     * Bind horizontal left/right touch swipe navigation on the question workspace.
+     * Swipe left -> Next question (strictly disabled on the last question).
+     * Swipe right -> Previous question.
+     */
+    function bindQuestionSwipeNavigation(mainEl) {
+      if (!mainEl || mainEl.dataset.swipeBound === 'true') return;
+      mainEl.dataset.swipeBound = 'true';
+
+      let swipeStart = null;
+      const IGNORE_SELECTOR = '#virtual-keyboard-container, textarea, input, select';
+
+      mainEl.addEventListener('touchstart', (e) => {
+        if (!isTestActive || e.touches.length !== 1) {
+          swipeStart = null;
+          return;
+        }
+        if (e.target && e.target.closest(IGNORE_SELECTOR)) {
+          swipeStart = null;
+          return;
+        }
+        const t = e.touches[0];
+        swipeStart = { x: t.clientX, y: t.clientY, time: Date.now() };
+      }, { passive: true });
+
+      mainEl.addEventListener('touchend', (e) => {
+        if (!swipeStart || e.changedTouches.length !== 1) {
+          swipeStart = null;
+          return;
+        }
+        const t = e.changedTouches[0];
+        const dx = t.clientX - swipeStart.x;
+        const dy = t.clientY - swipeStart.y;
+        const dt = Date.now() - swipeStart.time;
+        swipeStart = null;
+
+        if (!isTestActive || !Array.isArray(answerRows) || answerRows.length === 0) return;
+        if (dt > 600 || Math.abs(dx) < 55 || Math.abs(dx) <= Math.abs(dy) * 1.5) return;
+
+        if (dx < 0) {
+          // Swipe left -> Next question; strictly blocked on the last question
+          if (currentIndex >= answerRows.length - 1) {
+            triggerSwipeEdgeBump(mainEl, 'left');
+            return;
+          }
+          const nextBtn = document.getElementById('bottom-next-btn');
+          if (nextBtn && !nextBtn.disabled) {
+            window._pendingSwipeDir = 'next';
+            nextBtn.click();
+          }
+        } else {
+          // Swipe right -> Previous question
+          const prevBtn = document.getElementById('bottom-prev-btn');
+          if (!prevBtn || prevBtn.disabled) {
+            triggerSwipeEdgeBump(mainEl, 'right');
+            return;
+          }
+          window._pendingSwipeDir = 'prev';
+          prevBtn.click();
+        }
+      }, { passive: true });
+    }
 
     // Visual Testing & Catalog Harness Hook (Zero-mutation instant scenario rendering)
     window.__renderTestScenario = function(scenario) {
@@ -3475,20 +3558,20 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       statusEl.textContent = savedAnswer ? '● Recorded' : '● Ready';
       if (savedAnswer) statusEl.style.color = 'var(--clr-success)';
 
-      // Spoken Phrase Word-Counter
+      // Spoken Phrase Word-Counter (Unified inside white answer area, matching Written mode)
       const speechTargetPhraseWords = getTargetPhraseWordCount(snap, row);
       let speechWordCounter = null;
       let updateSpeechWordCount = null;
       if (speechTargetPhraseWords >= 2) {
-        speechWordCounter = document.createElement('span');
-        speechWordCounter.style.cssText = 'font-size:12px; font-weight:700; padding:1px 6px; border-radius:4px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08);';
+        speechWordCounter = document.createElement('div');
+        speechWordCounter.className = 'phrase-word-counter';
+        speechWordCounter.style.cssText = 'font-size:12px; font-weight:700; color:#475569; display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:6px; background:#f1f5f9; border:1px solid #cbd5e1;';
         updateSpeechWordCount = (val) => {
           const words = (val || '').trim().split(/\s+/).filter(Boolean).length;
           const isDone = words >= speechTargetPhraseWords;
-          speechWordCounter.innerHTML = `<span style="color:${isDone ? 'var(--clr-success)' : '#38bdf8'}; font-weight:800;">${words}</span> / ${speechTargetPhraseWords} words`;
+          speechWordCounter.innerHTML = `<span style="color:${isDone ? 'var(--clr-success)' : 'var(--primary-tactical, #38bdf8)'}; font-weight:800;">${words}</span> / ${speechTargetPhraseWords} words`;
         };
         updateSpeechWordCount(savedAnswer || '');
-        statusEl.appendChild(speechWordCounter);
       }
 
       topRow.appendChild(langSelect); topRow.appendChild(statusEl);
@@ -3506,35 +3589,46 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       const isQuizPractice = isTaskPractice; // Backward compatibility
       const targetAns = (snap?.correct_answer || snap?.answer || row?.correct_answer_snapshot || '').trim();
       const primaryTarget = targetAns.split(/[;/,|]/)[0].trim();
-      if (isTaskPractice && primaryTarget.length >= 3) {
-        const hintBtn = document.createElement('button');
-        hintBtn.type = 'button';
-        hintBtn.className = 'task-hint-btn';
-        hintBtn.innerHTML = 'Hint';
-        hintBtn.title = 'Get first-letter clue (Task practice only)';
-        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:#854d0e; background:var(--grade-c, #ffff00); border:1px solid #ca8a04; border-radius:6px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
+      const hasHint = isTaskPractice && primaryTarget.length >= 3;
 
-        const hintDisplay = document.createElement('div');
-        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#854d0e; margin-top:3px; display:none;';
-        const mask = primaryTarget.split(' ').map(w => {
-          if (w.length <= 2) return w;
-          return w[0].toUpperCase() + ' ' + '_ '.repeat(w.length - 1).trim();
-        }).join('   ');
-        hintDisplay.textContent = mask;
+      if (speechWordCounter || hasHint) {
+        const areaFooter = document.createElement('div');
+        areaFooter.style.cssText = 'display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:4px;';
+        if (speechWordCounter) areaFooter.appendChild(speechWordCounter);
 
-        hintBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          hintDisplay.style.display = 'block';
-          hintBtn.style.display = 'none';
-        });
+        if (hasHint) {
+          const hintBtn = document.createElement('button');
+          hintBtn.type = 'button';
+          hintBtn.className = 'task-hint-btn';
+          hintBtn.innerHTML = 'Hint';
+          hintBtn.title = 'Get first-letter clue (Task practice only)';
+          hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:#854d0e; background:var(--grade-c, #ffff00); border:1px solid #ca8a04; border-radius:6px; padding:2px 10px; cursor:pointer; transition:all 0.2s;';
 
-        area.appendChild(hintBtn);
-        area.appendChild(hintDisplay);
+          const hintDisplay = document.createElement('div');
+          hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#854d0e;';
+          hintDisplay.style.display = 'none';
+          const mask = primaryTarget.split(' ').map(w => {
+            if (w.length <= 2) return w;
+            return w[0].toUpperCase() + ' ' + '_ '.repeat(w.length - 1).trim();
+          }).join('   ');
+          hintDisplay.textContent = mask;
+
+          hintBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            hintDisplay.style.display = 'block';
+            hintBtn.style.display = 'none';
+          });
+
+          areaFooter.appendChild(hintBtn);
+          areaFooter.appendChild(hintDisplay);
+        }
+
+        area.appendChild(areaFooter);
       }
 
       const micBtn = document.createElement('button');
       micBtn.className = 'speech-mic-btn-lg';
-      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(var(--grade-a-rgb), 0.45); background:linear-gradient(135deg, var(--grade-a) 0%, #009900 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow: 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
+      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(148, 163, 184, 0.35); background:linear-gradient(135deg, #334155 0%, #1e293b 100%); color:#e2e8f0; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 4px 12px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
       micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
       const micHelp = document.createElement('div');
@@ -3572,14 +3666,13 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           onStart() {
             window._isSpeechRecognitionEngaged = true;
             micBtn.classList.add('listening');
-            micBtn.style.background = 'linear-gradient(135deg, var(--grade-e) 0%, #990000 100%)';
-            micBtn.style.borderColor = 'var(--grade-e)';
-            micBtn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
+            micBtn.style.background = 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)';
+            micBtn.style.borderColor = '#7dd3fc';
+            micBtn.style.boxShadow = '';
             micBtn.style.color = '#ffffff';
             micBtn.innerHTML = '<svg style="width:clamp(18px, 4.5vw, 24px); height:clamp(18px, 4.5vw, 24px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
             statusEl.innerHTML = '● Listening <span class="speech-wave-bars"><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span></span>';
-            if (speechWordCounter) statusEl.appendChild(speechWordCounter);
-            statusEl.style.color = 'var(--grade-e)';
+            statusEl.style.color = 'var(--primary-tactical, #38bdf8)';
             micHelp.textContent = 'Listening... (Tap to stop)';
             transcriptBox.innerHTML = '<span style="color:#94a3b8; font-style:italic;">Listening...</span>';
           },
@@ -3608,9 +3701,10 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             window._isSpeechRecognitionEngaged = false;
             currentActiveSpeechSession = null;
             micBtn.classList.remove('listening');
-            micBtn.style.background = 'linear-gradient(135deg, var(--grade-a) 0%, #009900 100%)';
-            micBtn.style.borderColor = 'rgba(var(--grade-a-rgb), 0.45)';
-            micBtn.style.color = '#0F172A';
+            micBtn.style.background = 'linear-gradient(135deg, #334155 0%, #1e293b 100%)';
+            micBtn.style.borderColor = 'rgba(148, 163, 184, 0.35)';
+            micBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35)';
+            micBtn.style.color = '#e2e8f0';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
             // Fail-safe commit: If interim transcript exists in box but onFinal never fired, commit it!
@@ -3626,7 +3720,6 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
             const hasAns = !!answeredMap[row.id];
             statusEl.innerHTML = hasAns ? '● Recorded' : '● Ready';
-            if (speechWordCounter) statusEl.appendChild(speechWordCounter);
             statusEl.style.color = hasAns ? 'var(--clr-success)' : '#94a3b8';
             micHelp.textContent = 'Tap to Speak';
           },
@@ -3634,9 +3727,10 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             window._isSpeechRecognitionEngaged = false;
             currentActiveSpeechSession = null;
             micBtn.classList.remove('listening');
-            micBtn.style.background = 'linear-gradient(135deg, var(--grade-a) 0%, #009900 100%)';
-            micBtn.style.borderColor = 'rgba(var(--grade-a-rgb), 0.45)';
-            micBtn.style.color = '#0F172A';
+            micBtn.style.background = 'linear-gradient(135deg, #334155 0%, #1e293b 100%)';
+            micBtn.style.borderColor = 'rgba(148, 163, 184, 0.35)';
+            micBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35)';
+            micBtn.style.color = '#e2e8f0';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
             // Suppress disruptive toasts for normal stops or intentional aborts
@@ -3644,7 +3738,6 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             if (isNormalStop) {
               const hasAns = !!answeredMap[row.id];
               statusEl.innerHTML = hasAns ? '● Recorded' : '● Ready';
-              if (speechWordCounter) statusEl.appendChild(speechWordCounter);
               statusEl.style.color = hasAns ? 'var(--clr-success)' : '#94a3b8';
               micHelp.textContent = 'Tap to Speak';
               return;
@@ -4178,6 +4271,23 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         e.preventDefault(); // Prevents input from losing focus on key click
       }
     });
+
+    // Instant touch feedback & optional subtle haptic for virtual keyboard keys
+    document.addEventListener('pointerdown', (e) => {
+      const k = e.target.closest('.vk-key');
+      if (!k) return;
+      k.classList.add('vk-pressed');
+      if (e.pointerType === 'touch' && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        try { navigator.vibrate(8); } catch (_) {}
+      }
+      setTimeout(() => k.classList.remove('vk-pressed'), 150);
+    }, { passive: true });
+    document.addEventListener('pointerup', () => {
+      document.querySelectorAll('.vk-key.vk-pressed').forEach(el => el.classList.remove('vk-pressed'));
+    }, { passive: true });
+    document.addEventListener('pointercancel', () => {
+      document.querySelectorAll('.vk-key.vk-pressed').forEach(el => el.classList.remove('vk-pressed'));
+    }, { passive: true });
 
     // Physical Keyboard Listener (allows laptop typing while keeping textarea readonly)
     document.addEventListener('keydown', (e) => {

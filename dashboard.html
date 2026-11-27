@@ -714,20 +714,6 @@
             </div>
           </div>
 
-          <!-- Contact & Guardian Details (With CONTACT & GUARDIAN Section Theme Divider) -->
-          <div class="intro-section intro-section-contact">
-            <div class="intro-group-header">
-              <div class="intro-group-title">CONTACT &amp; GUARDIAN</div>
-            </div>
-            <div class="intro-field-group" style="margin-bottom: 8px;">
-              <input type="tel" id="intro-phone" class="form-control intro-input" placeholder="Student WhatsApp / Phone" title="Student WhatsApp / Phone" />
-            </div>
-            <div class="intro-birthday-grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
-              <input type="text" id="intro-guardian-name" class="form-control intro-input" placeholder="Parent / Guardian Name" title="Parent / Guardian Name" />
-              <input type="tel" id="intro-guardian-phone" class="form-control intro-input" placeholder="Parent Phone / WA" title="Parent / Guardian WhatsApp" />
-            </div>
-          </div>
-
           <!-- Highest Education Dropdown (With EDUCATION Section Theme Divider) -->
           <div class="intro-section intro-section-education">
             <div class="intro-group-header">
@@ -746,34 +732,18 @@
             </select>
           </div>
 
-          <!-- 4-Tier Address Dropdowns (With ADDRESS Section Theme Divider) -->
+          <!-- Address Search + Autocomplete Suggestions (With ADDRESS Section Theme Divider) -->
           <div class="intro-section intro-section-address">
             <div class="intro-group-header">
               <div class="intro-group-title">ADDRESS</div>
             </div>
-            <div class="intro-field-group">
-              <label class="intro-field-label sr-only" for="intro-province">PROVINCE</label>
-              <select id="intro-province" class="form-control intro-select" title="Province">
-                <option value="" disabled selected>Select province…</option>
-              </select>
-            </div>
-            <div class="intro-field-group">
-              <label class="intro-field-label" for="intro-city">REGENCY</label>
-              <select id="intro-city" class="form-control intro-select" title="Regency" disabled>
-                <option value="" disabled selected>Select regency…</option>
-              </select>
-            </div>
-            <div class="intro-field-group">
-              <label class="intro-field-label sr-only" for="intro-district">DISTRICT</label>
-              <select id="intro-district" class="form-control intro-select" title="District" disabled>
-                <option value="" disabled selected>Select district…</option>
-              </select>
-            </div>
-            <div class="intro-field-group">
-              <label class="intro-field-label sr-only" for="intro-village">VILLAGE</label>
-              <select id="intro-village" class="form-control intro-select" title="Village" disabled>
-                <option value="" disabled selected>Select village…</option>
-              </select>
+            <div class="intro-address-autocomplete">
+              <input type="text" id="intro-address-search" class="form-control intro-input" placeholder="Type village, district, or city…" title="Address Search" autocomplete="off" />
+              <div id="intro-address-suggestions" class="intro-address-suggestions hidden" role="listbox" aria-label="Address suggestions"></div>
+              <input type="hidden" id="intro-province" />
+              <input type="hidden" id="intro-city" />
+              <input type="hidden" id="intro-district" />
+              <input type="hidden" id="intro-village" />
             </div>
           </div>
         </div>

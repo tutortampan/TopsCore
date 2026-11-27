@@ -2670,6 +2670,95 @@ export function resolveTaskRepTargets(testObj = null, classSettings = null) {
   };
 }
 
+/**
+ * Returns true when a test or class is strictly Words-Only (zero Phrases component),
+ * preventing phantom PHR cards/options on Words-Only vocabularies (SHRT/EVNK/TPTC) or phrases_reps=0 tests.
+ */
+export function isWordsOnlyTestOrClass(testObj = null, classObj = null) {
+  const code = String(
+    classObj?.code || classObj?.shell_code || testObj?.shell_code || ''
+  ).toUpperCase();
+  if (/^(SHRT|EVNK|TPTC)-(VOCAB|VCB)/.test(code)) {
+    return true;
+  }
+  const pReps = testObj?.payload?.phrases_reps;
+  if (pReps != null && !isNaN(Number(pReps)) && Number(pReps) === 0) {
+    return true;
+  }
+  if (testObj?.payload?.category === 'words' && !testObj?.payload?.is_unified) {
+    return true;
+  }
+  const qs = testObj?.questions || testObj?.payload?.questions;
+  if (Array.isArray(qs) && qs.length > 0) {
+    const hasPhr = qs.some(q => {
+      const cat = String(q?.category || q?.section || q?.word_type || q?.type || '').toLowerCase();
+      return ['phrases', 'phrase', 'expression', 'idiom', 'proverb'].includes(cat);
+    });
+    if (!hasPhr) return true;
+  }
+  return false;
+}
+
+/**
+ * Single Source of Truth (SSOT) for a test's component capabilities.
+ * Guarantees `isUnified` is true ONLY when both Words and Phrases components exist.
+ */
+export function resolveTestCapabilities(testObj = null, classObj = null, classSettings = null) {
+  const { wordsTarget, phrasesTarget: rawPhrasesTarget, maxTarget } = resolveTaskRepTargets(testObj, classSettings);
+  const wordsOnly = isWordsOnlyTestOrClass(testObj, classObj);
+  const isVocab = isVocabularyClass(classObj || testObj);
+  const rawUnified = Boolean(
+    (testObj?.payload?.is_unified === true ||
+     testObj?.payload?.category === 'unified' ||
+     testObj?.category === 'unified' ||
+     (testObj?.test_subtype && String(testObj.test_subtype).startsWith('UNIFIED'))) &&
+    testObj?.payload?.has_phrases !== false &&
+    testObj?.payload?.is_unified !== false &&
+    testObj?.payload?.category !== 'words'
+  );
+
+  if (wordsOnly) {
+    return {
+      hasWords: true,
+      hasPhrases: false,
+      isUnified: false,
+      wordsTarget,
+      phrasesTarget: 0,
+      maxTarget: Math.max(1, wordsTarget)
+    };
+  }
+
+  if (!isVocab && !rawUnified) {
+    return {
+      hasWords: false,
+      hasPhrases: false,
+      isUnified: false,
+      wordsTarget,
+      phrasesTarget: 0,
+      maxTarget
+    };
+  }
+
+  const hasPhrases = rawUnified || Boolean(
+    testObj?.payload?.category === 'phrases' ||
+    testObj?.payload?.has_phrases === true ||
+    /PHRASE/i.test(testObj?.shell_code || testObj?.title || '')
+  );
+  const hasWords = rawUnified || !hasPhrases || Boolean(
+    testObj?.payload?.category === 'words' ||
+    /WORDS/i.test(testObj?.shell_code || testObj?.title || '')
+  );
+
+  return {
+    hasWords,
+    hasPhrases,
+    isUnified: rawUnified && hasWords && hasPhrases,
+    wordsTarget,
+    phrasesTarget: hasPhrases ? rawPhrasesTarget : 0,
+    maxTarget: hasPhrases ? maxTarget : Math.max(1, wordsTarget)
+  };
+}
+
 // ── EXAM RULES & FINAL ASSESSMENT SSOT ENGINE ──
 export {
   EXAM_RULES_SCHEMA,

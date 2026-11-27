@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261126_v691';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v160';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, isPretest, isVocabQuiz, isNoRepetitionTest, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass, resolveTaskRepTargets } from './grading.js?v=20261127_v692';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, isPretest, isVocabQuiz, isNoRepetitionTest, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass, resolveTaskRepTargets, isWordsOnlyTestOrClass, resolveTestCapabilities } from './grading.js?v=20261127_v692';
     import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261117_v547';
     import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
     import { getSupabase } from './supabase.js?v=20261121_v161';
@@ -460,15 +460,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentDistrict = session.district || null;
       let currentVillage = session.village || null;
       let currentBirthplace = session.birthplace || null;
-      let currentPhone = session.phone || null;
-      let currentGuardianName = session.guardian_name || null;
-      let currentGuardianPhone = session.guardian_phone || null;
 
       if (!currentGender || !currentBirthDate || !currentEducation || !currentProvince || !currentCity) {
         try {
           const sb = await getSupabase();
           const { data: st } = await withTimeout(
-            sb.from('students').select('gender, birth_date, education, province, city, district, village, birthplace, phone, guardian_name, guardian_phone').eq('id', session.student_id).maybeSingle(),
+            sb.from('students').select('gender, birth_date, education, province, city, district, village, birthplace').eq('id', session.student_id).maybeSingle(),
             1500
           );
           if (st) {
@@ -480,9 +477,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (st.district) { currentDistrict = st.district; session.district = st.district; }
             if (st.village) { currentVillage = st.village; session.village = st.village; }
             if (st.birthplace) { currentBirthplace = st.birthplace; session.birthplace = st.birthplace; }
-            if (st.phone) { currentPhone = st.phone; session.phone = st.phone; }
-            if (st.guardian_name) { currentGuardianName = st.guardian_name; session.guardian_name = st.guardian_name; }
-            if (st.guardian_phone) { currentGuardianPhone = st.guardian_phone; session.guardian_phone = st.guardian_phone; }
             sessionStorage.setItem('topscore_session', JSON.stringify(session));
             renderHeroProfileDetails(session);
           }
@@ -517,9 +511,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const monthSel = document.getElementById('intro-birth-month');
       const yearInp = document.getElementById('intro-birth-year');
       const birthPlaceInp = document.getElementById('intro-birth-place');
-      const phoneInp = document.getElementById('intro-phone');
-      const guardianNameInp = document.getElementById('intro-guardian-name');
-      const guardianPhoneInp = document.getElementById('intro-guardian-phone');
+      const addrSearchInp = document.getElementById('intro-address-search');
+      const addrSuggestionsEl = document.getElementById('intro-address-suggestions');
       const provSel = document.getElementById('intro-province');
       const citySel = document.getElementById('intro-city');
       const distSel = document.getElementById('intro-district');
@@ -528,9 +521,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const confirmBtn = document.getElementById('btn-confirm-introduce');
 
       if (birthPlaceInp && currentBirthplace) birthPlaceInp.value = currentBirthplace;
-      if (phoneInp && currentPhone) phoneInp.value = currentPhone;
-      if (guardianNameInp && currentGuardianName) guardianNameInp.value = currentGuardianName;
-      if (guardianPhoneInp && currentGuardianPhone) guardianPhoneInp.value = currentGuardianPhone;
 
       let selectedGender = currentGender || null;
 
@@ -595,117 +585,114 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       }
 
-      function populateVillages(cityName, districtName, preselectVill = null) {
-        if (!villSel) return;
-        const villages = (typeof getVillagesForDistrict === 'function') ? getVillagesForDistrict(cityName, districtName) : [];
-        if (villages && villages.length > 0) {
-          villSel.disabled = false;
-          let html = '<option value="" disabled' + (!preselectVill ? ' selected' : '') + '>Select village…</option>';
-          html += villages.map(v => `<option value="${escapeHtml(v)}" ${preselectVill === v ? 'selected' : ''}>${escapeHtml(typeof formatVillageName === 'function' ? formatVillageName(v) : v)}</option>`).join('');
-          villSel.innerHTML = html;
-          if (preselectVill) villSel.value = preselectVill;
-        } else {
-          villSel.disabled = false;
-          villSel.innerHTML = '<option value="Other" selected>Other / Manual</option>';
+      // Build local address autocomplete index (NTB villages/districts + All Indonesia regencies/provinces)
+      const addressIndex = [];
+      if (typeof NTB_DISTRICTS_AND_VILLAGES !== 'undefined') {
+        Object.entries(NTB_DISTRICTS_AND_VILLAGES).forEach(([cityRaw, distMap]) => {
+          const cityFmt = typeof formatCityDistrict === 'function' ? formatCityDistrict(cityRaw) : cityRaw;
+          Object.entries(distMap || {}).forEach(([distRaw, villages]) => {
+            const distFmt = typeof formatDistrictName === 'function' ? formatDistrictName(distRaw) : distRaw;
+            (villages || []).forEach(villRaw => {
+              const villFmt = typeof formatVillageName === 'function' ? formatVillageName(villRaw) : villRaw;
+              addressIndex.push({
+                main: `${villFmt}, ${distFmt}`,
+                sub: `${cityFmt}, West Nusa Tenggara`,
+                display: `${villFmt}, ${distFmt}, ${cityFmt}, West Nusa Tenggara`,
+                search: `${villRaw} ${villFmt} ${distRaw} ${distFmt} ${cityRaw} ${cityFmt} West Nusa Tenggara Nusa Tenggara Barat NTB`.toLowerCase(),
+                province: 'West Nusa Tenggara',
+                city: cityRaw,
+                district: distRaw,
+                village: villRaw,
+                priority: 1
+              });
+            });
+          });
+        });
+      }
+      if (typeof INDONESIA_REGIONS !== 'undefined') {
+        Object.entries(INDONESIA_REGIONS).forEach(([provRaw, cities]) => {
+          const provFmt = typeof formatProvinceName === 'function' ? formatProvinceName(provRaw) : provRaw;
+          (cities || []).forEach(cityRaw => {
+            const cityFmt = typeof formatCityDistrict === 'function' ? formatCityDistrict(cityRaw) : cityRaw;
+            const def = typeof getDefaultDistrictAndVillage === 'function'
+              ? getDefaultDistrictAndVillage(cityRaw)
+              : { district: cityFmt, village: 'Other' };
+            addressIndex.push({
+              main: cityFmt,
+              sub: provFmt,
+              display: `${cityFmt}, ${provFmt}`,
+              search: `${cityRaw} ${cityFmt} ${provRaw} ${provFmt}`.toLowerCase(),
+              province: provRaw,
+              city: cityRaw,
+              district: def.district || cityFmt,
+              village: def.village || 'Other',
+              priority: 2
+            });
+          });
+        });
+      }
+
+      function setSelectedAddress(prov, city, dist, vill, displayLabel = '') {
+        if (provSel) provSel.value = prov || '';
+        if (citySel) citySel.value = city || '';
+        if (distSel) distSel.value = dist || '';
+        if (villSel) villSel.value = vill || '';
+        if (addrSearchInp && displayLabel) {
+          addrSearchInp.value = displayLabel;
         }
       }
 
-      function populateDistricts(cityName, preselectDist = null) {
-        if (!distSel) return;
-        const districts = (typeof getDistrictsForCity === 'function') ? getDistrictsForCity(cityName) : [];
-        if (districts && districts.length > 0) {
-          distSel.disabled = false;
-          let html = '<option value="" disabled' + (!preselectDist ? ' selected' : '') + '>Select district…</option>';
-          html += districts.map(d => `<option value="${escapeHtml(d)}" ${preselectDist === d ? 'selected' : ''}>${escapeHtml(typeof formatDistrictName === 'function' ? formatDistrictName(d) : d)}</option>`).join('');
-          distSel.innerHTML = html;
-          if (preselectDist) {
-            distSel.value = preselectDist;
-            populateVillages(cityName, preselectDist, currentVillage);
-          } else {
-            if (villSel) {
-              villSel.disabled = true;
-              villSel.innerHTML = '<option value="" disabled selected>Select village…</option>';
-            }
-          }
-        } else {
-          distSel.disabled = false;
-          distSel.innerHTML = '<option value="Other" selected>Other / Manual</option>';
-          if (villSel) {
-            villSel.disabled = false;
-            villSel.innerHTML = '<option value="Other" selected>Other / Manual</option>';
-          }
-        }
+      if (currentProvince && currentCity) {
+        const parts = [currentVillage, currentDistrict, currentCity, currentProvince].filter(Boolean);
+        setSelectedAddress(currentProvince, currentCity, currentDistrict || currentCity, currentVillage || 'Other', parts.join(', '));
       }
 
-      function populateCityDropdown(selectedProv, preselectCity = null) {
-        if (!citySel) return;
-        const rawCities = (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[selectedProv]) ? INDONESIA_REGIONS[selectedProv] : [];
-        if (rawCities.length > 0) {
-          citySel.disabled = false;
-          const sortedCities = [...rawCities].sort((a, b) => a.localeCompare(b, 'id'));
-          let cityHtml = '<option value="" disabled' + (!preselectCity ? ' selected' : '') + '>Select regency…</option>';
-
-          if (selectedProv === 'West Nusa Tenggara' || selectedProv === 'Nusa Tenggara Barat') {
-            const SUGGESTED_CITY = "Kota Mataram";
-            const otherCities = sortedCities.filter(c => c !== SUGGESTED_CITY);
-            cityHtml += `<option value="${SUGGESTED_CITY}" ${preselectCity === SUGGESTED_CITY ? 'selected' : ''}>Mataram City</option>`;
-            cityHtml += `<option disabled class="select-divider">──────────</option>`;
-            cityHtml += otherCities.map(c => `<option value="${escapeHtml(c)}" ${preselectCity === c ? 'selected' : ''}>${escapeHtml(typeof formatCityDistrict === 'function' ? formatCityDistrict(c) : c)}</option>`).join('');
-          } else {
-            cityHtml += sortedCities.map(c => `<option value="${escapeHtml(c)}" ${preselectCity === c ? 'selected' : ''}>${escapeHtml(typeof formatCityDistrict === 'function' ? formatCityDistrict(c) : c)}</option>`).join('');
-          }
-          citySel.innerHTML = cityHtml;
-          if (preselectCity) {
-            citySel.value = preselectCity;
-            populateDistricts(preselectCity, currentDistrict);
-          } else {
-            if (distSel) {
-              distSel.disabled = true;
-              distSel.innerHTML = '<option value="" disabled selected>Select district…</option>';
-            }
-            if (villSel) {
-              villSel.disabled = true;
-              villSel.innerHTML = '<option value="" disabled selected>Select village…</option>';
-            }
-          }
-        } else {
-          citySel.disabled = true;
-          citySel.innerHTML = '<option value="" disabled selected>Select regency…</option>';
+      function renderAddressSuggestions(query) {
+        if (!addrSuggestionsEl) return;
+        const q = (query || '').trim().toLowerCase();
+        if (q.length < 2) {
+          addrSuggestionsEl.classList.add('hidden');
+          addrSuggestionsEl.innerHTML = '';
+          return;
         }
-      }
-
-      // Populate 38 Provinces (Suggested West Nusa Tenggara at top, separated by divider, then A-Z)
-      if (provSel && typeof INDONESIA_REGIONS !== 'undefined') {
-        const SUGGESTED_PROV = "West Nusa Tenggara";
-        const otherProvinces = Object.keys(INDONESIA_REGIONS)
-          .filter(p => p !== 'Nusa Tenggara Barat' && p !== SUGGESTED_PROV)
-          .sort((a, b) => a.localeCompare(b, 'id'));
-
-        let provHtml = '<option value="" disabled' + (!currentProvince ? ' selected' : '') + '>Select province…</option>';
-        provHtml += `<option value="${SUGGESTED_PROV}" ${currentProvince === SUGGESTED_PROV ? 'selected' : ''}>${SUGGESTED_PROV}</option>`;
-        provHtml += `<option disabled class="select-divider">──────────</option>`;
-        provHtml += otherProvinces.map(p => `<option value="${escapeHtml(p)}" ${currentProvince === p ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
-
-        provSel.innerHTML = provHtml;
-
-        if (currentProvince && INDONESIA_REGIONS[currentProvince]) {
-          provSel.value = currentProvince;
-          populateCityDropdown(currentProvince, currentCity);
-        } else {
-          provSel.value = "";
-          if (citySel) {
-            citySel.disabled = true;
-            citySel.innerHTML = '<option value="" disabled selected>Select regency…</option>';
-          }
-          if (distSel) {
-            distSel.disabled = true;
-            distSel.innerHTML = '<option value="" disabled selected>Select district…</option>';
-          }
-          if (villSel) {
-            villSel.disabled = true;
-            villSel.innerHTML = '<option value="" disabled selected>Select village…</option>';
+        const tokens = q.split(/\s+/).filter(Boolean);
+        const matches = [];
+        for (let i = 0; i < addressIndex.length; i++) {
+          const item = addressIndex[i];
+          if (tokens.every(t => item.search.includes(t))) {
+            matches.push(item);
+            if (matches.length >= 24) break;
           }
         }
+        matches.sort((a, b) => {
+          const aStarts = a.main.toLowerCase().startsWith(q) ? 0 : 1;
+          const bStarts = b.main.toLowerCase().startsWith(q) ? 0 : 1;
+          if (aStarts !== bStarts) return aStarts - bStarts;
+          return a.priority - b.priority;
+        });
+        const top = matches.slice(0, 12);
+        if (!top.length) {
+          addrSuggestionsEl.innerHTML = `<div class="intro-address-suggestion-empty">No matching address found</div>`;
+          addrSuggestionsEl.classList.remove('hidden');
+          return;
+        }
+        addrSuggestionsEl.innerHTML = top.map((item, idx) => `
+          <button type="button" class="intro-address-suggestion-item" data-idx="${idx}" role="option">
+            <span class="intro-address-suggestion-main">${escapeHtml(item.main)}</span>
+            <span class="intro-address-suggestion-sub">${escapeHtml(item.sub)}</span>
+          </button>
+        `).join('');
+        addrSuggestionsEl.classList.remove('hidden');
+
+        addrSuggestionsEl.querySelectorAll('.intro-address-suggestion-item').forEach(btn => {
+          btn.onclick = () => {
+            const picked = top[parseInt(btn.dataset.idx, 10)];
+            if (!picked) return;
+            setSelectedAddress(picked.province, picked.city, picked.district, picked.village, picked.display);
+            addrSuggestionsEl.classList.add('hidden');
+            validateIntroForm();
+          };
+        });
       }
 
       updateEducationDropdown();
@@ -774,26 +761,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           validateIntroForm();
         };
       }
-      if (provSel) {
-        provSel.onchange = () => {
-          populateCityDropdown(provSel.value);
+      if (addrSearchInp) {
+        addrSearchInp.oninput = () => {
+          setSelectedAddress('', '', '', '');
+          renderAddressSuggestions(addrSearchInp.value);
           validateIntroForm();
         };
-      }
-      if (citySel) {
-        citySel.onchange = () => {
-          populateDistricts(citySel.value);
-          validateIntroForm();
+        addrSearchInp.onfocus = () => {
+          if (addrSearchInp.value.trim().length >= 2 && !provSel?.value) {
+            renderAddressSuggestions(addrSearchInp.value);
+          }
         };
-      }
-      if (distSel) {
-        distSel.onchange = () => {
-          populateVillages(citySel?.value, distSel.value);
-          validateIntroForm();
-        };
-      }
-      if (villSel) {
-        villSel.onchange = validateIntroForm;
       }
       if (eduSel) {
         eduSel.onchange = validateIntroForm;
@@ -826,9 +804,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const y = parseInt(yearInp.value, 10);
           const birthDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
           const selectedBirthPlace = birthPlaceInp?.value?.trim() || null;
-          const selectedPhone = phoneInp?.value?.trim() || null;
-          const selectedGuardianName = guardianNameInp?.value?.trim() || null;
-          const selectedGuardianPhone = guardianPhoneInp?.value?.trim() || null;
           const highestEdu = eduSel.value;
           const timeline = calculateEducationTimeline(y, highestEdu);
           const selectedProv = provSel?.value || null;
@@ -844,9 +819,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               education: highestEdu
             };
             if (selectedBirthPlace) updatePayload.birthplace = selectedBirthPlace;
-            if (selectedPhone) updatePayload.phone = selectedPhone;
-            if (selectedGuardianName) updatePayload.guardian_name = selectedGuardianName;
-            if (selectedGuardianPhone) updatePayload.guardian_phone = selectedGuardianPhone;
             if (selectedProv) updatePayload.province = selectedProv;
             if (selectedCity) updatePayload.city = selectedCity;
             if (selectedDist) updatePayload.district = selectedDist;
@@ -861,9 +833,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             session.education_level = highestEdu;
             session.academic_history = timeline;
             if (selectedBirthPlace) session.birthplace = selectedBirthPlace;
-            if (selectedPhone) session.phone = selectedPhone;
-            if (selectedGuardianName) session.guardian_name = selectedGuardianName;
-            if (selectedGuardianPhone) session.guardian_phone = selectedGuardianPhone;
             if (selectedProv) session.province = selectedProv;
             if (selectedCity) session.city = selectedCity;
             if (selectedDist) session.district = selectedDist;
@@ -1848,7 +1817,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const st = (a.status || '').toLowerCase();
         if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated' || st === 'graded') {
           const tObj = allTestsMap[aid];
-          const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+          const isUni = resolveTestCapabilities(tObj, validClass).isUnified;
           const tMin = Number(tObj?.minimum_required_score) || Number(tObj?.payload?.min_score) || minScore;
           const isPassing = a.is_forgiven || pct >= tMin || (isRemedialByTest[aid] && pct >= 60);
 
@@ -1883,7 +1852,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (phrasesBestByTest[tid] == null) phrasesBestByTest[tid] = 70.0;
         }
         const tObj = allTestsMap[tid];
-        const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+        const isUni = resolveTestCapabilities(tObj, validClass).isUnified;
         if (isUni) {
           // Self-Healing Fail-Safe: If a unified task has words passes >= 14 while phrases is 0,
           // auto-balance so untagged bulk reps never starve phrases or block exam progression!
@@ -1925,7 +1894,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || 60;
           return bestMap[t.id] != null && bestMap[t.id] >= req;
         }
-        const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
+        const { isUnified: isUni, wordsTarget: wT, phrasesTarget: pT, maxTarget: mT } = resolveTestCapabilities(t, validClass, { taskRepetitions: targetReps });
         if (isExam(t)) {
           const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || 60;
           if (isUni) {
@@ -1939,7 +1908,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           return score >= req || (isRemedialByTest[t.id] && score >= 60);
         } else {
           // Task: Strictly requires dynamic per-component passes (supports 7x7, 5x5, 3x6, 5x4, 1x1, etc.)
-          const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT } = resolveTaskRepTargets(t, { taskRepetitions: targetReps });
           if (isUni) {
             return (wordsPassCountByTest[t.id] || 0) >= wT && (phrasesPassCountByTest[t.id] || 0) >= pT;
           }
@@ -1954,7 +1922,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const theme = test.payload?.theme_code || (test.shell_code ? test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
         const topic = test.payload?.topic_code || (isEx ? null : (test.shell_code ? test.shell_code.split('-')[0].replace(/^[0-9]+/, '') : null));
 
-        const isUnifiedShell = test.payload?.is_unified === true || test.payload?.category === 'unified' || test.category === 'unified' || (test.test_subtype && test.test_subtype.startsWith('UNIFIED'));
+        const isWordsOnly = isWordsOnlyTestOrClass(test, validClass);
+        const isUnifiedShell = resolveTestCapabilities(test, validClass).isUnified;
         if (isUnifiedShell) {
           return {
             isPair: true,
@@ -1988,9 +1957,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const phrasesTest = isPhrases ? test : (sibling && ((sibling.payload?.category === 'phrases') || /phrase/i.test(sibling.title || '')) ? sibling : null);
 
         return {
-          isPair: Boolean(wordsTest && phrasesTest),
+          isPair: !isWordsOnly && Boolean(wordsTest && phrasesTest),
           wordsTest,
-          phrasesTest,
+          phrasesTest: isWordsOnly ? null : phrasesTest,
           isExam: isEx,
           theme,
           topic
@@ -2109,12 +2078,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       if (!isTest) {
         let subIndicatorHtml = '';
+        let hasPhrasesComp = false;
         if (isVocabClass) {
           // Words-Only classes (SHRT, EVNK, TPTC) must NEVER show PHR row regardless of DB data
-          const _classCode = ((validClass || activeTestItem)?.code || (validClass || activeTestItem)?.shell_code || '').toUpperCase();
-          const _isWordsOnlyVocab = /^(SHRT|EVNK|TPTC)-VOCAB/.test(_classCode);
+          const _isWordsOnlyVocab = isWordsOnlyTestOrClass(activeTestItem, validClass);
 
-          const hasPhrasesComp = !_isWordsOnlyVocab && Boolean(
+          hasPhrasesComp = !_isWordsOnlyVocab && Boolean(
             (nextAssignment.isPair && nextAssignment.phrasesTest) ||
             nextAssignment.primaryTest?.payload?.is_unified === true ||
             nextAssignment.primaryTest?.payload?.category === 'phrases' ||
@@ -2192,7 +2161,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           </div>
         `;
 
-        if (nextAssignment.isPair) {
+        if (nextAssignment.isPair && (!isVocabClass || hasPhrasesComp)) {
           const wordsP = nextAssignment.isUnified
             ? (wordsPassCountByTest[nextAssignment.wordsTest.id] || 0)
             : (passCountByTest[nextAssignment.wordsTest.id] || 0);
@@ -2239,12 +2208,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                               activeSession.allowed_student_ids.includes(session.student_id);
 
         let subIndicatorHtml = '';
+        let hasExamPhrasesComp = false;
         if (isVocabClass) {
           // Words-Only classes (SHRT, EVNK, TPTC) must NEVER show PHR row regardless of DB data
-          const _classCode2 = ((validClass || activeTestItem)?.code || (validClass || activeTestItem)?.shell_code || '').toUpperCase();
-          const _isWordsOnlyVocab2 = /^(SHRT|EVNK|TPTC)-VOCAB/.test(_classCode2);
+          const _isWordsOnlyVocab2 = isWordsOnlyTestOrClass(activeTestItem, validClass);
 
-          const hasExamPhrasesComp = !_isWordsOnlyVocab2 && Boolean(
+          hasExamPhrasesComp = !_isWordsOnlyVocab2 && Boolean(
             (nextAssignment.isPair && nextAssignment.phrasesTest) ||
             nextAssignment.primaryTest?.payload?.is_unified === true ||
             nextAssignment.primaryTest?.payload?.category === 'phrases' ||
@@ -2322,7 +2291,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             </div>
           `;
 
-          if (nextAssignment.isPair) {
+          if (nextAssignment.isPair && (!isVocabClass || hasExamPhrasesComp)) {
             const wBest = nextAssignment.isUnified
               ? (wordsBestByTest[nextAssignment.wordsTest.id] != null ? { percentage: wordsBestByTest[nextAssignment.wordsTest.id] } : null)
               : (bestMap[nextAssignment.wordsTest.id] != null ? { percentage: bestMap[nextAssignment.wordsTest.id] } : null);
@@ -2764,6 +2733,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (wordsIconEl) wordsIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
         if (phrasesIconEl) phrasesIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
 
+        const hasPhrasesOption = Boolean(data.phrasesTestId) && (Boolean(data.isExam) || phrasesTargetReps > 0);
+        const effectivePhrasesTestId = hasPhrasesOption ? data.phrasesTestId : null;
+
         // Smart default selection: choose incomplete component first
         let selectedPart = null;
         if (data.isExam) {
@@ -2771,22 +2743,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const phrasesPct = data.phrasesBest ? Number(data.phrasesBest.percentage ?? data.phrasesBest.effective_score ?? 0) : null;
           const wordsDone = wordsPct !== null && wordsPct >= 60;
           const phrasesDone = phrasesPct !== null && phrasesPct >= 60;
-          if (wordsDone && !phrasesDone && data.phrasesTestId) {
+          if (wordsDone && !phrasesDone && effectivePhrasesTestId) {
             selectedPart = 'phrases';
           } else if (data.wordsTestId) {
             selectedPart = 'words';
           } else {
-            selectedPart = data.phrasesTestId ? 'phrases' : null;
+            selectedPart = effectivePhrasesTestId ? 'phrases' : null;
           }
         } else {
           const wordsDone = (Number(data.wordsPasses) || 0) >= wordsTargetReps;
           const phrasesDone = (Number(data.phrasesPasses) || 0) >= phrasesTargetReps;
-          if (wordsDone && !phrasesDone && data.phrasesTestId) {
+          if (wordsDone && !phrasesDone && effectivePhrasesTestId) {
             selectedPart = 'phrases';
           } else if (data.wordsTestId) {
             selectedPart = 'words';
           } else {
-            selectedPart = data.phrasesTestId ? 'phrases' : null;
+            selectedPart = effectivePhrasesTestId ? 'phrases' : null;
           }
         }
 
@@ -2815,7 +2787,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         };
 
         const executeStart = () => {
-          const targetTestId = selectedPart === 'words' ? data.wordsTestId : (selectedPart === 'phrases' ? data.phrasesTestId : null);
+          const targetTestId = selectedPart === 'words' ? data.wordsTestId : (selectedPart === 'phrases' ? effectivePhrasesTestId : null);
           if (targetTestId) {
             modal.classList.add('hidden');
             if (data.isUnified) {
@@ -2864,7 +2836,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
 
         // Populate Phrases Card
-        if (data.phrasesTestId) {
+        if (effectivePhrasesTestId) {
           phrasesCard.style.display = 'flex';
           if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'PHR EXAM' : 'PHR';
           if (data.isExam) {
@@ -3033,7 +3005,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           inProgressByTest[aid] = att;
         } else if (st === 'SUBMITTED' || st === 'AUTO_SUBMITTED' || st === 'EVALUATED') {
           const tObj = tests.find(t => t.id === aid);
-          const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+          const isUni = resolveTestCapabilities(tObj, window._activeClassObj || null).isUnified;
           const asmMin = Number(tObj?.minimum_required_score) || Number(tObj?.payload?.min_score) || 60;
           const isPassing = att.is_forgiven || pct >= asmMin || (isRem && pct >= 60);
 
@@ -3087,7 +3059,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (manualRepsPByTest[tid] != null) {
           phrasesPassCountByTest[tid] = Math.max(phrasesPassCountByTest[tid] || 0, manualRepsPByTest[tid]);
         }
-        const isUni = asm?.payload?.is_unified === true || asm?.category === 'unified' || (asm?.test_subtype && asm.test_subtype.startsWith('UNIFIED'));
+        const isUni = resolveTestCapabilities(asm, window._activeClassObj || null).isUnified;
         if (isUni) {
           // Self-Healing Fail-Safe: If a unified task has words passes >= 14 while phrases is 0,
           // auto-balance so untagged bulk reps never starve phrases
@@ -3155,8 +3127,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
             // Dynamic Repetitive Mastery Hard Gate: All sibling tasks must reach N passes (>= passing threshold)
             for (const task of siblingTasks) {
-              const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT, label: tLabel } = resolveTaskRepTargets(task, window._classTestSettings);
-              const isUniTask = task?.payload?.is_unified === true || task?.category === 'unified' || (task?.test_subtype && task.test_subtype.startsWith('UNIFIED'));
+              const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT, isUnified: isUniTask } = resolveTestCapabilities(task, window._activeClassObj || null, window._classTestSettings);
+              const tLabel = `${wT}×${pT}`;
               const isTaskComplete = isUniTask
                 ? ((wordsPassCountByTest[task.id] || 0) >= wT && (phrasesPassCountByTest[task.id] || 0) >= pT)
                 : ((passCountByTest[task.id] || 0) >= mT);
@@ -3281,8 +3253,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const pObj = tests.find(a => a.id === pid);
           const isPrereqTask = pObj ? !isExam(pObj) : false;
           if (isPrereqTask) {
-            const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT, label: pLabel } = resolveTaskRepTargets(pObj, window._classTestSettings);
-            const isUniPrereq = pObj?.payload?.is_unified === true || pObj?.category === 'unified' || (pObj?.test_subtype && pObj.test_subtype.startsWith('UNIFIED'));
+            const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT, isUnified: isUniPrereq } = resolveTestCapabilities(pObj, window._activeClassObj || null, window._classTestSettings);
+            const pLabel = `${wT}×${pT}`;
             const pCount = passCountByTest[pid] || 0;
             const isForgiven = Boolean(bestByTest[pid]?.is_forgiven);
             prereqMet = isForgiven || (isUniPrereq ? ((wordsPassCountByTest[pid] || 0) >= wT && (phrasesPassCountByTest[pid] || 0) >= pT) : (pCount >= mT));
@@ -3493,10 +3465,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             return;
           }
 
-          const isUnified = matchedTest?.payload?.is_unified === true ||
-                            matchedTest?.payload?.category === 'unified' ||
-                            matchedTest?.category === 'unified' ||
-                            (matchedTest?.test_subtype && matchedTest.test_subtype.startsWith('UNIFIED'));
+          const isUnified = resolveTestCapabilities(matchedTest, window._activeClassObj || null).isUnified;
 
           if (isUnified && typeof window.triggerComponentChoiceModal === 'function') {
             const isEx = isExam(matchedTest);
@@ -3631,7 +3600,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
 
         if (isExam(asm)) {
-          const isUnified = asm?.payload?.is_unified || asm?.payload?.category === 'unified' || Number(asm?.payload?.total_questions || 0) === 200;
+          const isUnified = resolveTestCapabilities(asm, activeClass).isUnified;
           const fr = String(att.forgiven_reason || '');
           const tQ = Number(att.total_questions || asm?.total_questions || asm?.payload?.total_questions || 50);
           const rawScore = Number(att.score ?? 0);
@@ -4142,7 +4111,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
 
         const tObj = (allClassTests || []).find(x => x.id === tid);
-        const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+        const isUni = resolveTestCapabilities(tObj, activeClass).isUnified;
         const isPassing = att.is_forgiven || effPct >= 50.0;
 
         if (isUni) {
@@ -4174,7 +4143,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (!phrasesBestByTest[tid]) phrasesBestByTest[tid] = { effPct: 70.0, grade: 'C' };
         }
         if (manualRepsWByTest[tid] != null || manualRepsPByTest[tid] != null) {
-          const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
+          const isUni = resolveTestCapabilities(t, activeClass).isUnified;
           if (isUni) {
             // Self-Healing Fail-Safe: If a unified task has words passes >= 14 while phrases is 0,
             // auto-balance so untagged bulk reps never starve phrases
@@ -4238,10 +4207,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       window.handleCompletedExamClick = function(tId) {
         const tObj = (completedOnlyTests || []).find(item => item.id === tId);
         if (tObj) {
-          const isUnified = tObj.payload?.is_unified === true ||
-                            tObj.payload?.category === 'unified' ||
-                            tObj.category === 'unified' ||
-                            (tObj.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+          const isUnified = resolveTestCapabilities(tObj, activeClass).isUnified;
           if (isUnified && typeof window.triggerComponentChoiceModal === 'function') {
             const formatted = formatTestDisplay(tObj);
             const bObj = bestByTest[tId];
@@ -4285,12 +4251,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           (t.shell_code || '').toUpperCase().endsWith('-EXAM')
         );
 
-        const isUni = Boolean(
-          t.payload?.is_unified === true ||
-          t.payload?.category === 'unified' ||
-          t.category === 'unified' ||
-          (t.test_subtype && t.test_subtype.startsWith('UNIFIED'))
-        );
+        const isUni = resolveTestCapabilities(t, activeClass).isUnified;
 
         // Unified Exam: Render 2 distinct rows (Words and Phrase) per user requirement
         if (isEx && isUni) {
@@ -4390,14 +4351,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (!isEx) {
           // Task: Extract attempts to compute Top-7 Highest Scores sub-row (7x7 Repetitive Mastery System)
           const taskAttempts = validAttempts.filter(a => (a.test_id || a.tests?.id) === t.id);
-          const _compClassCode = ((activeClass || t)?.code || (activeClass || t)?.shell_code || '').toUpperCase();
-          const _isWordsOnlyComp = /^(SHRT|EVNK|TPTC)-VOCAB/.test(_compClassCode) || /^(SHRT|EVNK|TPTC)-VCB/.test(_compClassCode);
-          const isUniTask = !_isWordsOnlyComp && Boolean(
-            t.payload?.is_unified === true ||
-            t.category === 'unified' ||
-            (t.test_subtype && t.test_subtype.startsWith('UNIFIED')) ||
-            (isVocab && (t.payload?.has_phrases || /phrase/i.test(t.shell_code || t.title || '')))
-          );
+          const isUniTask = resolveTestCapabilities(t, activeClass).isUnified;
 
           const mapAtt = (a) => {
             const rawPct = parseFloat(a.effective_score != null ? a.effective_score : (a.percentage || 0));
@@ -5561,7 +5515,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           // B. Milestone Exams (Section-Aware: Words & Phrases for Unified Exams)
           Object.entries(examAttsByTest).forEach(([testId, atts]) => {
             const testMeta = atts[0].tests;
-            const isUnified = testMeta?.payload?.is_unified || testMeta?.payload?.category === 'unified' || Number(testMeta?.payload?.total_questions || 0) === 200;
+            const isUnified = resolveTestCapabilities(testMeta, window._activeClassObj || null).isUnified || Number(testMeta?.payload?.total_questions || 0) === 200;
 
             if (isUnified) {
               const wordsAtts = atts.filter(a => {

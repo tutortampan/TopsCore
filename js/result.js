@@ -6,7 +6,7 @@
  */
 
 import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, cleanStudentName, formatStudentDashboardName, formatAcademicTier, isCampContext } from './api.js?v=20261127_v689';
-import { isExam, getGradeColorByScore, calculateGrade, formatTestDisplay, validateDescriptionSentence } from './grading.js?v=20261127_v692';
+import { isExam, getGradeColorByScore, calculateGrade, formatTestDisplay, validateDescriptionSentence, isWordsOnlyTestOrClass, resolveTestCapabilities } from './grading.js?v=20261127_v692';
 import { getStudentSession, getAdminSession } from './session.js?v=20261106_v160';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
 import { getSupabase } from './supabase.js?v=20261106_v160';
@@ -770,7 +770,7 @@ setTimeout(purgeExternalBadges, 2000);
 
         // Compute authoritative completion for all published tests
         (published || []).forEach(t => {
-          const isUni = Boolean(t.payload?.is_unified || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED')));
+          const isUni = resolveTestCapabilities(t, currentClass).isUnified;
           const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || (isExam(t) ? 60 : minScore);
 
           if (isExam(t)) {
@@ -793,7 +793,7 @@ setTimeout(purgeExternalBadges, 2000);
               passCountByTest[t.id] = Math.min(wPasses, pPasses);
               isPassedByTest[t.id] = Boolean((wPasses >= targetReps && pPasses >= targetReps) || isForgivenByTest[t.id]);
             } else {
-              const passes = (allAtts || []).filter(at =>
+              const passes = (combinedAtts || []).filter(at =>
                 (at.test_id === t.id || at.Test_id === t.id) &&
                 (at.is_forgiven || Boolean(at.is_remedial_unlocked || at.is_remedial) || parseFloat(at.percentage || 0) >= req || parseFloat(at.effective_score || 0) >= req)
               ).length;
@@ -812,7 +812,7 @@ setTimeout(purgeExternalBadges, 2000);
         let nextCustomTitle = null;
         let targetUrl = null;
 
-        const curIsUni = Boolean(curAsm?.payload?.is_unified || curAsm?.category === 'unified' || (curAsm?.test_subtype && curAsm.test_subtype.startsWith('UNIFIED')));
+        const curIsUni = resolveTestCapabilities(curAsm, currentClass).isUnified;
         const examReq = Number(curAsm?.minimum_required_score) || Number(curAsm?.payload?.min_score) || 60;
         const curWordsPass = (wordsBestByTest[curAsm?.id] != null && wordsBestByTest[curAsm?.id] >= examReq) || Boolean(isForgivenByTest[curAsm?.id]);
         const curPhrasesPass = (phrasesBestByTest[curAsm?.id] != null && phrasesBestByTest[curAsm?.id] >= examReq) || Boolean(isForgivenByTest[curAsm?.id]);
@@ -1196,7 +1196,7 @@ setTimeout(purgeExternalBadges, 2000);
         const testId = attempt.test_id || attempt.Test_id;
 
         // Section-Aware Filter for Unified Tests (Words vs Phrases separation on Result Page)
-        const isUnified = asmData?.payload?.is_unified || asmData?.category === 'unified' || (asmData?.test_subtype && asmData.test_subtype.startsWith('UNIFIED'));
+        const isUnified = resolveTestCapabilities(asmData).isUnified;
         const attTotalQ = Number(attempt.total_questions || 0);
         const urlSection = (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
         let activeSectionName = null;

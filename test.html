@@ -135,20 +135,15 @@
     </div>
   </div>
 
-  <!-- Fixed Bottom Area (New Design: Row 1 = PREV/NEXT, Row 2 = Counter) -->
+  <!-- Fixed Bottom Area (Single Unified Row: PREV | COUNTER | NEXT/SUBMIT) -->
   <div id="fixed-bottom-area" class="test-fixed-bottom">
-    <!-- Row 1: PREV | NEXT (Exact 40px) -->
     <div class="test-bottom-container">
       <div class="bottom-nav-bar">
         <button id="bottom-prev-btn" class="btn-nav-prev" disabled>&larr; Prev</button>
+        <div id="question-counter" class="question-counter" onclick="window.toggleMatrixPopup()" title="Tap to view question grid" role="button" tabindex="0">
+          <span id="question-counter-text">0/40 Answered</span>
+        </div>
         <button id="bottom-next-btn" class="btn-nav-next">Next &rarr;</button>
-      </div>
-    </div>
-
-    <!-- Row 2: 0/100 Counter (Exact 40px, Full Width) -->
-    <div class="test-bottom-container">
-      <div id="question-counter" class="question-counter" onclick="window.toggleMatrixPopup()" title="Tap to view question grid">
-        <span id="question-counter-text">0/40 Answered</span>
       </div>
     </div>
   </div>

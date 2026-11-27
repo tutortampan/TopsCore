@@ -4582,6 +4582,67 @@ body.dashboard-page .completed-summary-val {
   margin: 0 !important;
 }
 
+.intro-address-autocomplete {
+  position: relative !important;
+  width: 100% !important;
+}
+
+.intro-address-suggestions {
+  position: absolute !important;
+  bottom: calc(100% + 4px) !important;
+  top: auto !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 60 !important;
+  max-height: 185px !important;
+  overflow-y: auto !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.6) !important;
+  padding: 4px !important;
+}
+
+.intro-address-suggestion-item {
+  width: 100% !important;
+  text-align: left !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 7px !important;
+  padding: 8px 10px !important;
+  color: #e2e8f0 !important;
+  font-size: 12.5px !important;
+  line-height: 1.35 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.intro-address-suggestion-item:hover,
+.intro-address-suggestion-item:focus {
+  background: rgba(56, 189, 248, 0.16) !important;
+  color: #ffffff !important;
+  outline: none !important;
+}
+
+.intro-address-suggestion-main {
+  font-weight: 700 !important;
+  color: #f8fafc !important;
+}
+
+.intro-address-suggestion-sub {
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+}
+
+.intro-address-suggestion-empty {
+  padding: 10px 12px !important;
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  text-align: center !important;
+}
+
 .intro-group-header {
   margin: 0 !important;
   text-align: center !important;

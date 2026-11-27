@@ -5,7 +5,7 @@ let deferredInstallPrompt = null;
 
 // ─── DEPLOY VERSION: Keep in sync with BUILD_DATE in sw.js ───────────────────
 // Update this string every deploy so browsers re-fetch the latest sw.js.
-const SW_VERSION = '20261127_v248';
+const SW_VERSION = '20261127_v249';
 
 export function initPWA() {
   // 1. Register Service Worker with safe update detection
@@ -16,6 +16,10 @@ export function initPWA() {
           reg.update();
           console.log('[PWA] ServiceWorker registered with scope:', reg.scope);
 
+          if (reg.waiting && navigator.serviceWorker.controller) {
+            handleUpdateReady();
+          }
+
           // Listen for new service worker installation
           reg.addEventListener('updatefound', () => {
             const installingWorker = reg.installing;
@@ -23,6 +27,7 @@ export function initPWA() {
             installingWorker.addEventListener('statechange', () => {
               if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 console.log('[PWA] New version ready! Activating immediately...');
+                handleUpdateReady();
                 installingWorker.postMessage({ type: 'SKIP_WAITING' });
               }
             });
@@ -86,8 +91,76 @@ export function initPWA() {
   });
 }
 
+function mountTopGateBanner(banner) {
+  // Strictly for the Student Gate (index.html) below TOPS CORE header
+  const secInstitution = document.getElementById('sec-institution');
+  if (secInstitution && secInstitution.parentNode) {
+    secInstitution.parentNode.insertBefore(banner, secInstitution);
+    return true;
+  }
+  const loginWrapper = document.querySelector('.login-wrapper');
+  if (loginWrapper) {
+    loginWrapper.insertBefore(banner, loginWrapper.firstChild);
+    return true;
+  }
+  return false;
+}
+
+function handleUpdateReady() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                       window.navigator.standalone === true;
+  if (isStandalone) {
+    renderUpdateBanner();
+  }
+}
+
+function renderUpdateBanner() {
+  if (document.getElementById('pwa-update-banner')) return;
+  hideInstallBanner();
+
+  const banner = document.createElement('div');
+  banner.id = 'pwa-update-banner';
+  banner.className = 'pwa-install-banner';
+  banner.setAttribute('role', 'region');
+  banner.setAttribute('aria-label', 'Update TopsCore App');
+  banner.innerHTML = `
+    <div class="pwa-install-card">
+      <div class="pwa-install-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+        </svg>
+      </div>
+      <div class="pwa-install-content">
+        <div class="pwa-install-title">Update TopsCore App</div>
+      </div>
+      <div class="pwa-install-actions">
+        <button type="button" class="pwa-btn-install" id="pwa-btn-update">Update</button>
+        <button type="button" class="pwa-btn-dismiss" id="pwa-btn-update-dismiss" aria-label="Dismiss">Later</button>
+      </div>
+    </div>
+  `;
+
+  if (!mountTopGateBanner(banner)) return;
+
+  const updateBtn = document.getElementById('pwa-btn-update');
+  if (updateBtn) {
+    updateBtn.addEventListener('click', async () => {
+      updateBtn.disabled = true;
+      updateBtn.textContent = 'Updating...';
+      await forceHardResetApp();
+    });
+  }
+
+  const dismissBtn = document.getElementById('pwa-btn-update-dismiss');
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', () => {
+      banner.remove();
+    });
+  }
+}
+
 function renderInstallBanner() {
-  if (document.getElementById('pwa-install-banner')) return;
+  if (document.getElementById('pwa-install-banner') || document.getElementById('pwa-update-banner')) return;
 
   const banner = document.createElement('div');
   banner.id = 'pwa-install-banner';
@@ -112,14 +185,7 @@ function renderInstallBanner() {
     </div>
   `;
 
-  // The PWA install banner is strictly for the Student Gate (index.html)
-  const secInstitution = document.getElementById('sec-institution');
-  if (secInstitution && secInstitution.parentNode) {
-    secInstitution.parentNode.insertBefore(banner, secInstitution);
-  } else if (document.querySelector('.login-wrapper')) {
-    const loginWrapper = document.querySelector('.login-wrapper');
-    loginWrapper.insertBefore(banner, loginWrapper.firstChild);
-  } else {
+  if (!mountTopGateBanner(banner)) {
     // Never render the install banner on internal student study pages (dashboard, test, result)
     return;
   }
@@ -241,7 +307,7 @@ export function bindSelfHealingSync() {
     e.preventDefault();
     syncBtn.disabled = true;
     syncBtn.classList.add('syncing');
-    syncBtn.setAttribute('aria-label', 'Syncing updates...');
+    syncBtn.setAttribute('aria-label', 'Refreshing...');
     await forceHardResetApp();
   });
 }

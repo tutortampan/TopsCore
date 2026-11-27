@@ -10352,6 +10352,13 @@ body.admin-body[data-theme="light"] .admin-content,
 body.admin-body[data-theme="light"] .admin-main,
 body.admin-body[data-theme="light"] .workspace-container {
   background: #eef2f6 !important;
+  --clr-text-1: #0f172a;
+  --clr-text-2: #334155;
+  --clr-text-3: #475569;
+  --clr-text-muted: #64748b;
+  --fm-text-primary: #0f172a;
+  --fm-text-secondary: #334155;
+  --fm-text-muted: #475569;
 }
 
 /* 5. Cards & Table Wrapper (Crisp White Paper Card on Soft Canvas) */
@@ -10363,6 +10370,21 @@ body.admin-body[data-theme="light"] .modal-box {
   background-color: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  --clr-text-1: #0f172a;
+  --clr-text-2: #334155;
+  --clr-text-3: #475569;
+  --clr-text-muted: #64748b;
+  --fm-text-primary: #0f172a;
+  --fm-text-secondary: #334155;
+  --fm-text-muted: #475569;
+}
+
+body.admin-body[data-theme="light"] .table-wrap thead,
+body.admin-body[data-theme="light"] .table-wrap tfoot {
+  --clr-text-1: #ffffff;
+  --clr-text-2: #e2e8f0;
+  --clr-text-3: #cbd5e1;
+  --clr-text-muted: #94a3b8;
 }
 
 body.admin-body[data-theme="light"] .glass-card h3,

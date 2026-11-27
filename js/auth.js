@@ -283,7 +283,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
         renderOptions('list-student', 'search-student', students, (s) => {
           state.studentId = s.id; state.studentName = s.name;
           collapseSection('sec-student', s.name, 'step-num-4');
-          document.getElementById('pin-welcome-text').innerHTML = `Welcome, <strong>${escHtml(s.name)}</strong>! Enter your 4-digit PIN.`;
+          document.getElementById('pin-welcome-text').textContent = 'Enter your 4-digit PIN.';
           unlockSection('sec-pin');
           const pin0 = document.getElementById('pin-0');
           if (pin0) {
@@ -509,7 +509,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       if (!state.studentId) { unlockSection('sec-student'); return; }
 
       collapseSection('sec-student', saved.studentName || state.studentName, 'step-num-4');
-      document.getElementById('pin-welcome-text').innerHTML = `Welcome back, <strong>${escHtml(saved.studentName || state.studentName)}</strong>! Enter your PIN.`;
+      document.getElementById('pin-welcome-text').textContent = 'Enter your 4-digit PIN.';
       unlockSection('sec-pin');
       if (clearLinkEl) clearLinkEl.classList.add('visible');
       setTimeout(() => document.getElementById('pin-0').focus(), 300);

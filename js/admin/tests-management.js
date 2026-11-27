@@ -1,6 +1,6 @@
 import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=20261125_v688';
 import { openTestBuilder } from './test-builder.js?v=20261106_v160';
-import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261109_v172';
+import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261127_v693';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, getInvertedGradeColor, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch, cleanPunctuationAndSymbols, parseCorrectAnswers, getClassSvgIcon } from '../grading.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';

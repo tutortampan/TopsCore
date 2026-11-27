@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261106_v160';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, isPretest, isVocabQuiz, isNoRepetitionTest, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, resolveTaskRepTargets } from './grading.js?v=20261127_v692';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, isPretest, isVocabQuiz, isNoRepetitionTest, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, resolveTaskRepTargets, resolveTestCapabilities } from './grading.js?v=20261127_v692';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261106_v160';
 import { escapeHtml, escHtml, showToast } from './app.js?v=20261106_v160';
 
@@ -2306,15 +2306,7 @@ export async function startTest(studentId, testId) {
     const defaultExamMin = Number(testSettings?.examMinScore) || 60;
 
     const isPrereqExam = prereqTest ? isWeeklyExam(prereqTest) : false;
-    const isPrereqUnified = Boolean(
-      (prereqTest?.payload?.is_unified === true ||
-       prereqTest?.payload?.category === 'unified' ||
-       prereqTest?.category === 'unified' ||
-       (prereqTest?.test_subtype && prereqTest.test_subtype.startsWith('UNIFIED'))) &&
-      prereqTest?.payload?.has_phrases !== false &&
-      prereqTest?.payload?.is_unified !== false &&
-      prereqTest?.payload?.category !== 'words'
-    );
+    const isPrereqUnified = resolveTestCapabilities(prereqTest, null, testSettings).isUnified;
 
     // Prerequisite passing threshold:
     // Must evaluate the prerequisite test's threshold (prereqTest), NOT the current test's threshold (asmData).
@@ -2431,13 +2423,7 @@ export async function startTest(studentId, testId) {
         (taskAttempts || []).forEach(att => {
           const tid = att.test_id;
           const tObj = taskMap[tid];
-          const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT } = resolveTaskRepTargets(tObj, testSettings);
-          const isUni = Boolean(
-            (tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'))) &&
-            tObj?.payload?.has_phrases !== false &&
-            tObj?.payload?.is_unified !== false &&
-            tObj?.payload?.category !== 'words'
-          );
+          const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT, isUnified: isUni } = resolveTestCapabilities(tObj, null, testSettings);
           if (att.is_forgiven) {
             passCountByTask[tid] = Math.max(passCountByTask[tid] || 0, mT);
             wordsPassByTask[tid] = Math.max(wordsPassByTask[tid] || 0, wT);
@@ -2461,13 +2447,7 @@ export async function startTest(studentId, testId) {
         });
 
         const unmasteredTask = themeTasks.find(t => {
-          const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT } = resolveTaskRepTargets(t, testSettings);
-          const isUni = Boolean(
-            (t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'))) &&
-            t.payload?.has_phrases !== false &&
-            t.payload?.is_unified !== false &&
-            t.payload?.category !== 'words'
-          );
+          const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT, isUnified: isUni } = resolveTestCapabilities(t, null, testSettings);
           if (isUni) {
             return (wordsPassByTask[t.id] || 0) < wT || (phrasesPassByTask[t.id] || 0) < pT;
           }
@@ -2584,12 +2564,7 @@ export async function startTest(studentId, testId) {
       (priorTaskAttempts || []).forEach(att => {
         const tid = att.test_id;
         const tObj = taskMap[tid];
-        const isUni = Boolean(
-          (tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'))) &&
-          tObj?.payload?.has_phrases !== false &&
-          tObj?.payload?.is_unified !== false &&
-          tObj?.payload?.category !== 'words'
-        );
+        const isUni = resolveTestCapabilities(tObj, null, testSettings).isUnified;
         const fr = String(att.forgiven_reason || '');
         const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
 
@@ -2628,13 +2603,7 @@ export async function startTest(studentId, testId) {
       });
 
       const unmasteredTask = filteredPriorTasks.find(t => {
-        const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT } = resolveTaskRepTargets(t, testSettings);
-        const isUni = Boolean(
-          (t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'))) &&
-          t.payload?.has_phrases !== false &&
-          t.payload?.is_unified !== false &&
-          t.payload?.category !== 'words'
-        );
+        const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT, isUnified: isUni } = resolveTestCapabilities(t, null, testSettings);
         if (isUni) {
           return (wordsPassByTask[t.id] || 0) < wT || (phrasesPassByTask[t.id] || 0) < pT;
         }

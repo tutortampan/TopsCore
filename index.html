@@ -42,7 +42,7 @@
     <div class="login-wrapper" role="main">
       <!-- Brand -->
       <div class="login-brand">
-        <h1 class="brand-title">TOPS <span class="brand-core">CORE</span></h1>
+        <h1 class="brand-title">TOPS<span class="brand-core">CORE</span></h1>
       </div>
 
       <!-- --- SECTION 1: Institution --- -->
@@ -53,7 +53,9 @@
               <span class="cascade-label">Institution</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-institution-label"></span>
             </div>
-            <button class="cascade-change-btn hidden" id="change-institution-btn">Change</button>
+            <button class="cascade-change-btn hidden" id="change-institution-btn" title="Change Institution" aria-label="Change Institution">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/></svg>
+            </button>
           </div>
           <div class="cascade-body" id="body-institution">
             <div class="cascade-search">
@@ -75,7 +77,9 @@
               <span class="cascade-label">Program</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-program-label"></span>
             </div>
-            <button class="cascade-change-btn hidden" id="change-program-btn">Change</button>
+            <button class="cascade-change-btn hidden" id="change-program-btn" title="Change Program" aria-label="Change Program">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            </button>
           </div>
           <div class="cascade-body" id="body-program">
             <div class="cascade-search">
@@ -97,7 +101,9 @@
               <span class="cascade-label">Batch</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-batch-label"></span>
             </div>
-            <button class="cascade-change-btn hidden" id="change-batch-btn">Change</button>
+            <button class="cascade-change-btn hidden" id="change-batch-btn" title="Change Batch" aria-label="Change Batch">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </button>
           </div>
           <div class="cascade-body" id="body-batch">
             <div class="cascade-search">
@@ -119,7 +125,9 @@
               <span class="cascade-label">Name</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-student-label"></span>
             </div>
-            <button class="cascade-change-btn hidden" id="change-student-btn">Change</button>
+            <button class="cascade-change-btn hidden" id="change-student-btn" title="Change Name" aria-label="Change Name">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </button>
           </div>
           <div class="cascade-body" id="body-student">
             <div class="cascade-search">
@@ -139,10 +147,10 @@
           <div class="cascade-header">
             <div class="cascade-title-wrap">
               <span class="cascade-label">PIN</span><span class="cascade-colon">:</span>
+              <span class="pin-inline-hint" id="pin-welcome-text">Enter your 4-digit PIN.</span>
             </div>
           </div>
           <div class="pin-section">
-            <p class="pin-welcome" id="pin-welcome-text">Welcome! Please enter your 4-digit PIN.</p>
             <div class="pin-row" role="group" aria-label="4-digit PIN">
               <input class="pin-digit" id="pin-0" type="tel" inputmode="numeric" maxlength="1" aria-label="PIN digit 1" autocomplete="off" />
               <input class="pin-digit" id="pin-1" type="tel" inputmode="numeric" maxlength="1" aria-label="PIN digit 2" autocomplete="off" />
@@ -159,12 +167,6 @@
         </div>
       </div>
 
-      <!-- Footer Utility Links: Admin Access Gear & Cache Self-Healing Sync -->
-      <div class="admin-gear-wrap">
-        <button type="button" id="app-sync-btn" class="admin-gear-link app-sync-btn" title="Sync Latest Updates" aria-label="Sync Latest Updates"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg></button>
-        <a href="admin.html" id="admin-portal-link" class="admin-gear-link" title="Tutor's Room" aria-label="Tutor's Room"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></a>
-      </div>
-
     </div>
   </div>
 
@@ -173,7 +175,15 @@
   <script type="module" src="./js/pwa.js?v=20261125_v681"></script>
 
   <div id="bottom-ad-banner" class="topscore-locked-banner">
-    <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
+    <button type="button" id="app-sync-btn" class="bottom-bar-btn app-sync-btn" title="Refresh App" aria-label="Refresh App">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+    </button>
+    <div class="bottom-bar-center">
+      <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
+    </div>
+    <a href="admin.html" id="admin-portal-link" class="bottom-bar-btn admin-gear-link" title="Tutor's Room" aria-label="Tutor's Room">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </a>
   </div>
 </body>
 </html>

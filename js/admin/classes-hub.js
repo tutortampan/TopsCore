@@ -12,6 +12,8 @@ import { showToast, escapeHtml } from '../app.js?v=20261106_v160';
 import { detectClassDiscipline, INSTITUTION_GRADING_SCALES, TOPSCORE_COLORS, calculateGrade, getGradeColorByScore } from '../grading.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 import { renderVocabularySystemPage } from './auto-gen-modal.js?v=20261124_v683';
+import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261127_v693';
+import { openTestBuilder } from './test-builder.js?v=20261106_v160';
 
 export async function renderClassesHub(area) {
   if (!area.querySelector('.classes-hub-container') && !area.querySelector('.curriculum-hub-container')) {
@@ -318,6 +320,16 @@ export async function renderClassesHub(area) {
         window.loadSection('class-hub');
       } else {
         window.location.hash = '#class-hub';
+      }
+    };
+
+    // Open Class-Aware Test Builder (Task, Exam, Quiz, Pre-Test, Try-Out)
+    window.openClassTestBuilderFromHub = (classId, className) => {
+      const n = String(className || '').toLowerCase();
+      if (n.includes('vocab') || n.includes('phrase')) {
+        openVocabWizard(null, { classId, className, testType: 'VOCAB_MASTERY' });
+      } else {
+        openTestBuilder(null, classId);
       }
     };
 
@@ -782,9 +794,12 @@ export async function renderClassesHub(area) {
             </div>
 
             <!-- Action Ribbon -->
-            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px; margin-top:2px;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" style="height:24px !important; line-height:22px !important; padding:0 6px !important; font-size:10px !important; font-weight:700; border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:3px;" title="Configure Test & Scoring Rules for this class">
-                ${getSvgIcon('award', 11)} Configure Rules
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:4px; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px; margin-top:2px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name).replace(/'/g, "\\'")}')" style="height:24px !important; line-height:22px !important; padding:0 6px !important; font-size:10px !important; font-weight:700; border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:3px;" title="Configure Test & Scoring Rules for this class">
+                ${getSvgIcon('award', 11)} Rules
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="window.openClassTestBuilderFromHub('${cls.id}','${escapeHtml(cls.name).replace(/'/g, "\\'")}')" style="height:24px !important; line-height:22px !important; padding:0 7px !important; font-size:10px !important; font-weight:800; border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:3px; background:var(--primary-tactical, #38bdf8); color:#090D16; border:1px solid rgba(56,189,248,0.6);" title="Open Test Builder (Task, Exam, Quiz, Pre-Test, Try-Out)">
+                ${getSvgIcon('plus', 11)} Test Builder
               </button>
               <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('class-hub');}else{window.location.hash='#class-hub';}" style="height:24px !important; line-height:22px !important; padding:0 6px !important; font-size:10px !important; font-weight:700; border-radius:3px; cursor:pointer; color:#38bdf8; border-color:rgba(56,189,248,0.4);" title="Open Workstation Binder">
                 Workspace ↗

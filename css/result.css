@@ -407,7 +407,7 @@
       background: rgba(15, 23, 42, 0.95) !important;
     }
 
-    /* ===== SMART NEXT MILESTONE CTA (STRICT 50px HEIGHT) ===== */
+    /* ===== SMART NEXT MILESTONE CTA (STRICT 80px HEIGHT) ===== */
     .btn-next-milestone {
       display: flex !important;
       flex-direction: column !important;
@@ -415,10 +415,10 @@
       justify-content: center !important;
       width: 100% !important;
       box-sizing: border-box !important;
-      padding: 4px 10px !important;
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      padding: 6px 12px !important;
+      height: 80px !important;
+      min-height: 80px !important;
+      max-height: 80px !important;
       border-radius: 10px !important;
       text-align: center !important;
       cursor: pointer !important;
@@ -1802,9 +1802,9 @@
     .result-action-slot {
       width: 100% !important;
       max-width: 100% !important;
-      height: 50px !important;
-      min-height: 50px !important;
-      max-height: 50px !important;
+      height: 80px !important;
+      min-height: 80px !important;
+      max-height: 80px !important;
       flex-shrink: 0 !important;
       margin: 0 auto !important;
       display: flex !important;
@@ -2038,9 +2038,9 @@ body.result-page #back-dashboard-btn {
 body.result-page .result-action-slot,
 body.result-page #smart-next-action-container,
 body.result-page .btn-next-milestone {
-  height: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
 }
 
 body.result-page .result-action-slot > div,
