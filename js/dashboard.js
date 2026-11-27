@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261126_v691';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v160';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, isPretest, isVocabQuiz, isNoRepetitionTest, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass, resolveTaskRepTargets, isWordsOnlyTestOrClass, resolveTestCapabilities } from './grading.js?v=20261127_v692';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, isPretest, isVocabQuiz, isNoRepetitionTest, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass, resolveTaskRepTargets, isWordsOnlyTestOrClass, resolveTestCapabilities, resolveUnifiedExamAttemptBreakdown } from './grading.js?v=20261127_v692';
     import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261117_v547';
     import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
     import { getSupabase } from './supabase.js?v=20261121_v161';
@@ -1822,13 +1822,33 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const isPassing = a.is_forgiven || pct >= tMin || (isRemedialByTest[aid] && pct >= 60);
 
           if (isUni) {
-            const sec = getAttemptSection(a);
-            if (sec === 'phrases') {
-              if (phrasesBestByTest[aid] == null || pct > phrasesBestByTest[aid]) phrasesBestByTest[aid] = pct;
-              if (isPassing) phrasesPassCountByTest[aid] = (phrasesPassCountByTest[aid] || 0) + 1;
+            if (isExam(tObj)) {
+              const isRemAtt = Boolean(a.is_remedial_unlocked || a.is_remedial || isRemedialByTest[aid]);
+              const { wordsPct, phrasesPct } = resolveUnifiedExamAttemptBreakdown(a, {
+                isRemedialOverride: isRemAtt,
+                sectionHint: getAttemptSection(a)
+              });
+              if (wordsPct != null) {
+                if (wordsBestByTest[aid] == null || wordsPct > wordsBestByTest[aid]) wordsBestByTest[aid] = wordsPct;
+                if (a.is_forgiven || wordsPct >= tMin || (isRemAtt && wordsPct >= 60)) {
+                  wordsPassCountByTest[aid] = (wordsPassCountByTest[aid] || 0) + 1;
+                }
+              }
+              if (phrasesPct != null) {
+                if (phrasesBestByTest[aid] == null || phrasesPct > phrasesBestByTest[aid]) phrasesBestByTest[aid] = phrasesPct;
+                if (a.is_forgiven || phrasesPct >= tMin || (isRemAtt && phrasesPct >= 60)) {
+                  phrasesPassCountByTest[aid] = (phrasesPassCountByTest[aid] || 0) + 1;
+                }
+              }
             } else {
-              if (wordsBestByTest[aid] == null || pct > wordsBestByTest[aid]) wordsBestByTest[aid] = pct;
-              if (isPassing) wordsPassCountByTest[aid] = (wordsPassCountByTest[aid] || 0) + 1;
+              const sec = getAttemptSection(a);
+              if (sec === 'phrases') {
+                if (phrasesBestByTest[aid] == null || pct > phrasesBestByTest[aid]) phrasesBestByTest[aid] = pct;
+                if (isPassing) phrasesPassCountByTest[aid] = (phrasesPassCountByTest[aid] || 0) + 1;
+              } else {
+                if (wordsBestByTest[aid] == null || pct > wordsBestByTest[aid]) wordsBestByTest[aid] = pct;
+                if (isPassing) wordsPassCountByTest[aid] = (wordsPassCountByTest[aid] || 0) + 1;
+              }
             }
             passCountByTest[aid] = Math.min(wordsPassCountByTest[aid] || 0, phrasesPassCountByTest[aid] || 0);
           } else {
@@ -2199,13 +2219,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           activeSession = await fetchActiveTestSession(nextAssignment.phrasesTest.id, session.batch_id).catch(() => null);
         }
 
-        const isFlexible = (activeTestItem.schedule_mode || activeTestItem.payload?.schedule_mode) === 'flexible';
-        const isUnlocked = isAlumni || isFlexible || activeSession?.is_unlocked === true;
-        const isWhitelisted = isAlumni ||
-                              isFlexible ||
-                              !activeSession?.allowed_student_ids ||
-                              activeSession.allowed_student_ids.length === 0 ||
-                              activeSession.allowed_student_ids.includes(session.student_id);
+        // Strict Exam Session Gate: ALL formal exams require an active Tutor-opened session (even for Alumni or flexible schedule_mode)
+        const isUnlocked = activeSession?.is_unlocked === true;
+        const isWhitelisted = isUnlocked && (
+          !activeSession?.allowed_student_ids ||
+          activeSession.allowed_student_ids.length === 0 ||
+          activeSession.allowed_student_ids.includes(session.student_id)
+        );
 
         let subIndicatorHtml = '';
         let hasExamPhrasesComp = false;
@@ -3269,13 +3289,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
         }
 
-        // Live test session state
+        // Live test session state (Strict: ALL formal exams require Tutor-opened session, even for Alumni)
         const isAlumni = studentLevelNum === 99 || (session?.program_status || '').toUpperCase() === 'ALUMNI';
         const liveSession = asm.payload?.test_session;
-        const isSessionUnlocked = isAlumni || (liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > new Date()));
-        const isWhitelisted = isAlumni || (isSessionUnlocked && (!Array.isArray(liveSession?.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(session?.student_id || session?.id)));
+        const isSessionUnlocked = Boolean(liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > new Date()));
+        const isWhitelisted = Boolean(isSessionUnlocked && (!Array.isArray(liveSession?.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(session?.student_id || session?.id)));
         const isAsmTest = isThemeTest;
-        const isFlexible = (asm.schedule_mode || asm.payload?.schedule_mode) === 'flexible';
 
         // Availability window
         const now = new Date();
@@ -3298,7 +3317,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         } else if (!inWindow) {
           statusBadge = `<span class="badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);">Not Yet Available</span>`;
           actionBtn = `<button class="btn btn-sm" disabled style="opacity:0.45;cursor:not-allowed;background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);">Unavailable</button>`;
-        } else if (isAsmTest && !isAlumni && !isFlexible && !isSessionUnlocked) {
+        } else if (isAsmTest && (!isSessionUnlocked || !isWhitelisted)) {
           statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--grade-e);border:1px solid rgba(239,68,68,0.3);display:inline-flex;align-items:center;">${getSvgIcon('lock', 12)} Session Closed</span>`;
           actionBtn = `<button class="btn btn-sm" disabled style="opacity:0.45;cursor:not-allowed;background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);">${getSvgIcon('lock', 12)} Closed</button>`;
         } else if (inProgAtt) {
@@ -3441,18 +3460,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           sessionStorage.setItem('topscore_test_id', testId);
           const matchedTest = (tests || []).find(t => t.id === testId);
 
-          const isAlumniUser = studentLevelNum === 99 || (session?.program_status || '').toUpperCase() === 'ALUMNI';
-          if (matchedTest && !isAlumniUser) {
+          if (matchedTest) {
             const isEx = isExam(matchedTest);
-            const liveSess = matchedTest.payload?.test_session;
-            const isFlex = (matchedTest.schedule_mode || matchedTest.payload?.schedule_mode) === 'flexible';
-            if (isEx && !isFlex && liveSess) {
-              const isClosed = liveSess.status === 'LOCKED' || (liveSess.auto_close_at && new Date(liveSess.auto_close_at) <= new Date());
-              if (isClosed) {
+            const isStandaloneExempt = isPretest(matchedTest) || isVocabQuiz(matchedTest) || matchedTest.payload?.is_standalone_tryout === true;
+            if (isEx && !isStandaloneExempt) {
+              const liveSess = matchedTest.payload?.test_session;
+              const isSessOpen = Boolean(liveSess && liveSess.status === 'UNLOCKED' && (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()));
+              const allowedIds = Array.isArray(liveSess?.allowed_student_ids) ? liveSess.allowed_student_ids : [];
+              const isStudentAllowed = isSessOpen && (allowedIds.length === 0 || allowedIds.includes(session?.student_id || session?.id));
+              if (!isStudentAllowed) {
                 if (typeof showToast === 'function') {
-                  showToast('This test session has been closed by the Tutor.', 'warning');
+                  showToast('This exam session has not been opened by the Tutor yet.', 'warning');
                 } else {
-                  alert('This test session has been closed by the Tutor.');
+                  alert('This exam session has not been opened by the Tutor yet.');
                 }
                 return;
               }
@@ -4200,13 +4220,40 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Order strictly from latest completed test down to earliest
       const sortedAccessible = [...completedOnlyTests].reverse();
 
+      const isExamSessionOpen = (tObj) => {
+        if (!tObj) return false;
+        const isStandaloneExempt = isPretest(tObj) || isVocabQuiz(tObj) || tObj.payload?.is_standalone_tryout === true;
+        if (isStandaloneExempt) return true;
+        const liveSess = tObj.payload?.test_session;
+        const isSessOpen = Boolean(liveSess && liveSess.status === 'UNLOCKED' && (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()));
+        const allowedIds = Array.isArray(liveSess?.allowed_student_ids) ? liveSess.allowed_student_ids : [];
+        return isSessOpen && (allowedIds.length === 0 || allowedIds.includes(session?.student_id || session?.id));
+      };
+
       window.handleCompletedExamComponentClick = function(tId, compKey) {
+        const tObj = (completedOnlyTests || []).find(item => item.id === tId);
+        if (tObj && isExamItem(tObj) && !isExamSessionOpen(tObj)) {
+          if (typeof showToast === 'function') {
+            showToast('Exam session is locked. Please wait for the Tutor to open the session.', 'warning');
+          } else {
+            alert('Exam session is locked. Please wait for the Tutor to open the session.');
+          }
+          return;
+        }
         window.location.href = `test.html?id=${tId}&section=${compKey}`;
       };
 
       window.handleCompletedExamClick = function(tId) {
         const tObj = (completedOnlyTests || []).find(item => item.id === tId);
         if (tObj) {
+          if (isExamItem(tObj) && !isExamSessionOpen(tObj)) {
+            if (typeof showToast === 'function') {
+              showToast('Exam session is locked. Please wait for the Tutor to open the session.', 'warning');
+            } else {
+              alert('Exam session is locked. Please wait for the Tutor to open the session.');
+            }
+            return;
+          }
           const isUnified = resolveTestCapabilities(tObj, activeClass).isUnified;
           if (isUnified && typeof window.triggerComponentChoiceModal === 'function') {
             const formatted = formatTestDisplay(tObj);
@@ -4256,25 +4303,30 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Unified Exam: Render 2 distinct rows (Words and Phrase) per user requirement
         if (isEx && isUni) {
           const examAttempts = validAttempts.filter(a => (a.test_id || a.tests?.id) === t.id);
-          const wordsAtts = examAttempts.filter(a => getAttemptSection(a) !== 'phrases');
-          const phrasesAtts = examAttempts.filter(a => getAttemptSection(a) === 'phrases');
 
-          const getBestComp = (attsList) => {
-            let bestComp = null;
-            attsList.forEach(a => {
-              const rawPct = parseFloat(a.effective_score != null ? a.effective_score : (a.percentage || 0));
-              const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
-              const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-              const gr = typeof calculateGrade === 'function' ? calculateGrade(effPct) : (typeof getGrade === 'function' ? getGrade(effPct) : 'E');
-              if (!bestComp || effPct > bestComp.effPct) {
-                bestComp = { effPct, grade: gr, isRem, is_forgiven: Boolean(a.is_forgiven), rawPct };
-              }
-            });
-            return bestComp;
+          let bestW = null;
+          let bestP = null;
+          const recordComp = (target, effPct, isRem, isForgiven, rawPct) => {
+            const gr = typeof calculateGrade === 'function' ? calculateGrade(effPct) : (typeof getGrade === 'function' ? getGrade(effPct) : 'E');
+            if (!target || effPct > target.effPct) {
+              return { effPct, grade: gr, isRem, is_forgiven: isForgiven, rawPct };
+            }
+            return target;
           };
 
-          const bestW = getBestComp(wordsAtts);
-          const bestP = getBestComp(phrasesAtts);
+          examAttempts.forEach(a => {
+            const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
+            const isForgiven = Boolean(a.is_forgiven);
+            const { wordsPct, phrasesPct } = resolveUnifiedExamAttemptBreakdown(a, {
+              sectionHint: getAttemptSection(a)
+            });
+            if (wordsPct != null) {
+              bestW = recordComp(bestW, wordsPct, isRem, isForgiven, wordsPct);
+            }
+            if (phrasesPct != null) {
+              bestP = recordComp(bestP, phrasesPct, isRem, isForgiven, phrasesPct);
+            }
+          });
 
           const renderExamCompRow = (compKey, compLabel, compColor, bestComp) => {
             const currentNum = rowNum++;

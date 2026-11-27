@@ -973,13 +973,10 @@ setTimeout(purgeExternalBadges, 2000);
         if (!isTest) {
           renderNextMilestoneButton();
         } else {
-          // If continuing counterpart component of the SAME exam, session is already actively unlocked
           const isSameExamComponent = (nextTest.id === curAsm?.id);
-          const activeSession = isSameExamComponent
-            ? { is_unlocked: true }
-            : await fetchActiveTestSession(nextTest.id, batchId).catch(() => null);
+          const activeSession = await fetchActiveTestSession(nextTest.id, batchId).catch(() => null);
           const isUnlocked = activeSession?.is_unlocked === true;
-          const isWhitelisted = isSameExamComponent || (
+          const isWhitelisted = isUnlocked && (
             !activeSession?.allowed_student_ids ||
             activeSession.allowed_student_ids.length === 0 ||
             activeSession.allowed_student_ids.includes(targetStudentId)

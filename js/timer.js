@@ -4,16 +4,22 @@
 /** 
  * @param {string} expectedEndAtISO - ISO string from server
  * @param {Object} options
+ * @param {number} [options.totalSeconds] - total duration in seconds for percentage-based warnings (30% & 10%)
  * @param {Function} options.onTick(remainingSeconds)
- * @param {Function} options.onWarning(remainingSeconds) - called at 5min and 2min marks
+ * @param {Function} options.onWarning(remainingSeconds, tier) - called at 30% ('warning') and 10% ('critical') marks
  * @param {Function} options.onExpire() - called when timer reaches zero
  * @returns {{ stop: Function }}
  */
-export function startCountdown(expectedEndAtISO, { onTick, onWarning, onExpire } = {}) {
+export function startCountdown(expectedEndAtISO, { totalSeconds, onTick, onWarning, onExpire } = {}) {
   const endTime = new Date(expectedEndAtISO).getTime();
+  const initialRemaining = Math.max(1, Math.floor((endTime - Date.now()) / 1000));
+  const total = (Number(totalSeconds) > 0) ? Number(totalSeconds) : initialRemaining;
+  const warnThreshold = Math.max(1, Math.round(total * 0.30));
+  const critThreshold = Math.max(1, Math.round(total * 0.10));
+
   let intervalId = null;
-  let warningFired5 = false;
-  let warningFired2 = false;
+  let warningFired = false;
+  let criticalFired = false;
 
   function tick() {
     const remaining = Math.floor((endTime - Date.now()) / 1000);
@@ -27,16 +33,16 @@ export function startCountdown(expectedEndAtISO, { onTick, onWarning, onExpire }
 
     onTick?.(remaining);
 
-    // Warning at 5 minutes
-    if (!warningFired5 && remaining <= 300) {
-      warningFired5 = true;
-      onWarning?.(remaining);
+    // Warning at 30% remaining
+    if (!warningFired && remaining <= warnThreshold) {
+      warningFired = true;
+      onWarning?.(remaining, 'warning');
     }
 
-    // Warning at 2 minutes
-    if (!warningFired2 && remaining <= 120) {
-      warningFired2 = true;
-      onWarning?.(remaining);
+    // Critical at 10% remaining
+    if (!criticalFired && remaining <= critThreshold) {
+      criticalFired = true;
+      onWarning?.(remaining, 'critical');
     }
   }
 

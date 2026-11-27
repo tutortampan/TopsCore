@@ -344,4 +344,36 @@ assert(testJsContent.includes("requestedSection === 'phrases' && hasPhraseRows")
 
 console.log('  ✔ Pillar 9: Unified vs Words-Only capability SSOT & section=phrases guard strictly verified');
 
-console.log('\n✅ ALL 9 REPETITIVE MASTERY & EXAM ISOLATION SAFEGUARDS PASSED WITH 100% SUCCESS!\n');
+// =========================================================================
+// PILLAR 10: Unified Exam 200Q Decomposition SSOT (Zero UI Score Drift)
+// =========================================================================
+const { resolveUnifiedExamAttemptBreakdown } = await import('../js/grading.js');
+const legacy200Q = resolveUnifiedExamAttemptBreakdown({
+  score: 119.5,
+  total_questions: 200,
+  percentage: 59.75,
+  effective_score: 59.75
+});
+assert.strictEqual(legacy200Q.isFull200Q, true);
+assert.strictEqual(legacy200Q.wordsPts, 120);
+assert.strictEqual(legacy200Q.wordsPct, 75, '200Q attempt with 119.5 pts must decompose Words to 75% (120/160)');
+assert.strictEqual(legacy200Q.phrasesPct, null, '200Q attempt with <=160 pts must not fabricate Phrases score');
+
+const phrase40Q = resolveUnifiedExamAttemptBreakdown({
+  score: 28,
+  total_questions: 40,
+  percentage: 70,
+  effective_score: 70,
+  forgiven_reason: '[SECTION: PHRASES] MANUAL_OVERRIDE: 70% (28/40 PTS)'
+});
+assert.strictEqual(phrase40Q.isFull200Q, false);
+assert.strictEqual(phrase40Q.phrasesPts, 28);
+assert.strictEqual(phrase40Q.phrasesPct, 70);
+assert.strictEqual(phrase40Q.wordsPct, null);
+
+const breakdownMatches = dashboardContent.match(/resolveUnifiedExamAttemptBreakdown\(/g) || [];
+assert(breakdownMatches.length >= 2, 'dashboard.js must call resolveUnifiedExamAttemptBreakdown in both Hero and TESTS tab');
+
+console.log('  ✔ Pillar 10: Unified Exam 200Q decomposition SSOT & dashboard Hero/TESTS sync verified');
+
+console.log('\n✅ ALL 10 REPETITIVE MASTERY & EXAM ISOLATION SAFEGUARDS PASSED WITH 100% SUCCESS!\n');

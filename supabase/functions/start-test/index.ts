@@ -267,6 +267,39 @@ Deno.serve(async (req) => {
                                test.payload?.no_prerequisites === true ||
                                isPretestTest ||
                                isQuizTest;
+    const isExamSubtype = (test.test_subtype || '').toUpperCase().includes('TEST') || (test.test_subtype || '').toUpperCase().includes('EXAM');
+    const isExamShell = (test.shell_code || '').toUpperCase().endsWith('-TEST') || (test.shell_code || '').toUpperCase().endsWith('-EXAM');
+    const isExamTitle = ((test.title || '').toLowerCase().includes('test') || (test.title || '').toLowerCase().includes('exam')) && !(test.title || '').toLowerCase().includes('task');
+    const isFormalExam = !isStandaloneTryout && (
+      (test.test_type || '').toLowerCase() === 'exam' || isExamSubtype || isExamShell || isExamTitle
+    ) && !(test.shell_code || '').toUpperCase().includes('-TASK')
+      && !(test.test_subtype || '').toUpperCase().includes('TASK')
+      && !(test.title || '').toLowerCase().includes('task')
+      && !(test.test_type || '').toLowerCase().includes('task')
+      && !(test.test_type || '').toLowerCase().includes('quiz');
+
+    const verifyStrictExamSession = () => {
+      if (!isFormalExam) return null;
+      const liveSess = test.payload?.test_session;
+      const isSessUnlocked = liveSess?.status === 'UNLOCKED' && (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > now);
+      if (!isSessUnlocked) {
+        return new Response(JSON.stringify({ error: "This exam session has not been opened by the Tutor yet." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      const allowedList = Array.isArray(liveSess.allowed_student_ids) ? liveSess.allowed_student_ids : [];
+      if (allowedList.length > 0 && !allowedList.includes(student_id)) {
+        return new Response(JSON.stringify({ error: "You are not on the attendance whitelist for today's exam session." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      if (liveSess.batch_id && student.batch_id && liveSess.batch_id !== student.batch_id && !allowedList.includes(student_id)) {
+        return new Response(JSON.stringify({ error: "This exam session is designated for a different batch." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      return null;
+    };
     const prereqId = test.prerequisite_test_id;
     if (prereqId && !isStandaloneTryout) {
       const [prereqAttRes, prereqTestRes] = await Promise.all([
@@ -423,6 +456,10 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Strict Tutor-Opened Session Gate for ALL formal exams (new & resumed, including Alumni)
+    const strictSessionGateErr = verifyStrictExamSession();
+    if (strictSessionGateErr) return strictSessionGateErr;
+
     // 6. Check for existing in-progress attempt (Resume)
     const { data: existing } = await supabase
       .from("attempts")
@@ -564,27 +601,11 @@ Deno.serve(async (req) => {
 
       // Validation: Strict Theme Prerequisites for Exams
       if (!isStandaloneTryout && test.test_type === 'exam') {
-        const isFlexible = (test.schedule_mode || test.payload?.schedule_mode) === 'flexible';
         const liveSession = test.payload?.test_session;
 
-        // 1. Session check: only required if strict schedule mode or liveSession is configured
-        if (!isFlexible && (test.schedule_mode === 'strict' || liveSession)) {
-          const isSessionUnlocked = liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > now);
-          const isWhitelisted = isSessionUnlocked && (!Array.isArray(liveSession.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(student_id));
-
-          if (!isSessionUnlocked) {
-            // Bypass session lock if student has already passed or is forgiven (24/7 self-paced retake)
-            if (!isEligibleForSelfPaced) {
-              return new Response(JSON.stringify({ error: "This test session has not been opened by the Tutor yet." }), {
-                status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-              });
-            }
-          } else if (!isWhitelisted && !isEligibleForSelfPaced) {
-            return new Response(JSON.stringify({ error: "You are not on the attendance whitelist for today's test session." }), {
-              status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-            });
-          }
-        }
+        // 1. Strict Session check: ALL formal exams require an active Tutor-opened session
+        const sessionGateErr = verifyStrictExamSession();
+        if (sessionGateErr) return sessionGateErr;
 
         // 2. Strict Prerequisite Tasks check: Must pass ALL theme tasks 7 times >= 70% (7×7 Mastery)
         // Exempt authorized remedial attempts and students eligible for self-paced retakes

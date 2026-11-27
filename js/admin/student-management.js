@@ -17,6 +17,142 @@ if (typeof window !== 'undefined') {
 
 let studentGrid = null;
 
+// ── Admin IndexedDB Student Photo Cache (0-Egress Repeat Visits) ──
+const _ADMIN_PHOTO_DB_NAME = 'topscore_admin_photo_cache';
+const _ADMIN_PHOTO_STORE = 'photos';
+const _photoMemCache = new Map(); // id -> photo_url (string; '' means confirmed no photo)
+let _photoIdbLoaded = false;
+let _photoIdbLoadPromise = null;
+const _photoHydrationInFlight = new Set();
+
+function _openPhotoIdb() {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') return reject(new Error('No IndexedDB'));
+    const req = indexedDB.open(_ADMIN_PHOTO_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(_ADMIN_PHOTO_STORE)) {
+        db.createObjectStore(_ADMIN_PHOTO_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function ensurePhotoCacheLoaded() {
+  if (_photoIdbLoaded) return;
+  if (_photoIdbLoadPromise) return _photoIdbLoadPromise;
+  _photoIdbLoadPromise = (async () => {
+    try {
+      const db = await _openPhotoIdb();
+      await new Promise((resolve) => {
+        const tx = db.transaction(_ADMIN_PHOTO_STORE, 'readonly');
+        const store = tx.objectStore(_ADMIN_PHOTO_STORE);
+        const req = store.getAll();
+        req.onsuccess = () => {
+          (req.result || []).forEach((item) => {
+            if (item && item.id) _photoMemCache.set(item.id, item.photo_url || '');
+          });
+          resolve();
+        };
+        req.onerror = () => resolve();
+      });
+      db.close();
+    } catch (_) {
+      // Fallback gracefully to in-memory only
+    } finally {
+      _photoIdbLoaded = true;
+    }
+  })();
+  return _photoIdbLoadPromise;
+}
+
+function getCachedStudentPhoto(studentId) {
+  if (!studentId) return '';
+  return _photoMemCache.get(studentId) || '';
+}
+
+async function setCachedStudentPhoto(studentId, photoUrl) {
+  if (!studentId) return;
+  const val = photoUrl || '';
+  _photoMemCache.set(studentId, val);
+  try {
+    const db = await _openPhotoIdb();
+    await new Promise((resolve) => {
+      const tx = db.transaction(_ADMIN_PHOTO_STORE, 'readwrite');
+      tx.objectStore(_ADMIN_PHOTO_STORE).put({ id: studentId, photo_url: val, updated_at: Date.now() });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+    db.close();
+  } catch (_) {}
+}
+
+async function hydrateVisibleStudentPhotos(container, rows = []) {
+  if (!container) return;
+  await ensurePhotoCacheLoaded();
+
+  const imgs = Array.from(container.querySelectorAll('img[data-stu-pic-id]'));
+  if (!imgs.length) return;
+
+  const rowMap = new Map((rows || []).map(r => [r.id, r]));
+  const missingIds = [];
+
+  imgs.forEach((img) => {
+    const sid = img.dataset.stuPicId;
+    if (!sid) return;
+
+    if (_photoMemCache.has(sid)) {
+      const cached = _photoMemCache.get(sid);
+      if (cached && img.getAttribute('src') !== cached) {
+        img.src = cached;
+      }
+      return;
+    }
+
+    const row = rowMap.get(sid);
+    // Only fetch from DB if photo_status === 'set' (or unknown/not yet marked) and not already in flight
+    const pStatus = row?.photo_status ?? row?._raw?.photo_status;
+    if (pStatus !== 'none' && pStatus !== 'unset' && !_photoHydrationInFlight.has(sid)) {
+      missingIds.push(sid);
+    }
+  });
+
+  const uniqueMissing = [...new Set(missingIds)];
+  if (!uniqueMissing.length) return;
+
+  uniqueMissing.forEach(id => _photoHydrationInFlight.add(id));
+  try {
+    const sb = await getSupabase();
+    const CHUNK = 40;
+    for (let i = 0; i < uniqueMissing.length; i += CHUNK) {
+      const batchIds = uniqueMissing.slice(i, i + CHUNK);
+      const { data } = await sb.from('students').select('id, photo_url').in('id', batchIds);
+      const foundIds = new Set();
+      (data || []).forEach((st) => {
+        foundIds.add(st.id);
+        const url = st.photo_url || '';
+        setCachedStudentPhoto(st.id, url);
+        if (url) {
+          container.querySelectorAll(`img[data-stu-pic-id="${st.id}"]`).forEach((imgEl) => {
+            imgEl.src = url;
+          });
+        }
+      });
+      batchIds.forEach((id) => {
+        if (!foundIds.has(id) && !_photoMemCache.has(id)) {
+          _photoMemCache.set(id, '');
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Visible student photo hydration skipped:', err?.message || err);
+  } finally {
+    uniqueMissing.forEach(id => _photoHydrationInFlight.delete(id));
+  }
+}
+
 // escapeHtml / escHtml imported canonically
 
 
@@ -246,7 +382,7 @@ export async function renderStudents(area, options = {}) {
   const studentFilters = isAlumniPanel ? {} : (currentProgramId ? { program_id: currentProgramId } : {});
   const rawData = await adminFetchAll(
     'students',
-    'id, nis, name, pin, pin_hash, gender, birth_date, birthplace, education, province, city, district, village, is_active, program_status, created_at, deleted_at, level_id, batch_id, program_id, institution_id, is_repeat, original_batch_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id), original_batches:batches!original_batch_id(name)',
+    'id, nis, name, pin, pin_hash, gender, birth_date, birthplace, education, province, city, district, village, photo_status, is_active, program_status, created_at, deleted_at, level_id, batch_id, program_id, institution_id, is_repeat, original_batch_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id), original_batches:batches!original_batch_id(name)',
     studentFilters
   );
 
@@ -1482,13 +1618,22 @@ export async function renderStudents(area, options = {}) {
   window.showStudentProgressDetails = async function(studentId) {
     const rec = (filteredGridData || gridData || []).find(d => d.id === studentId);
     if (!rec) return;
-    // On-demand photo fetch for detail modal
+    // On-demand photo fetch for detail modal (IndexedDB cache first)
     if (!rec.photo_url && rec.id) {
-      try {
-        const sb = await getSupabase();
-        const { data: pData } = await sb.from('students').select('photo_url').eq('id', rec.id).single();
-        if (pData?.photo_url) rec.photo_url = pData.photo_url;
-      } catch (_) {}
+      await ensurePhotoCacheLoaded();
+      const cached = getCachedStudentPhoto(rec.id);
+      if (cached) {
+        rec.photo_url = cached;
+      } else {
+        try {
+          const sb = await getSupabase();
+          const { data: pData } = await sb.from('students').select('photo_url').eq('id', rec.id).maybeSingle();
+          if (pData?.photo_url) {
+            rec.photo_url = pData.photo_url;
+            setCachedStudentPhoto(rec.id, pData.photo_url);
+          }
+        } catch (_) {}
+      }
     }
     const existing = document.getElementById('prog-details-modal');
     if (existing) existing.remove();
@@ -1844,6 +1989,24 @@ export async function renderStudents(area, options = {}) {
       }
     }
     if (!rec) return;
+
+    // Hydrate photo_url from IndexedDB cache or on-demand Supabase fetch for Dossier
+    if (!rec.photo_url && rec.id) {
+      await ensurePhotoCacheLoaded();
+      const cached = getCachedStudentPhoto(rec.id);
+      if (cached) {
+        rec.photo_url = cached;
+      } else {
+        try {
+          const sb = await getSupabase();
+          const { data: pData } = await sb.from('students').select('photo_url').eq('id', rec.id).maybeSingle();
+          if (pData?.photo_url) {
+            rec.photo_url = pData.photo_url;
+            setCachedStudentPhoto(rec.id, pData.photo_url);
+          }
+        } catch (_) {}
+      }
+    }
 
     // Carousel navigation indices across cohort list
     const currentIdx = list.findIndex(d => d.id === studentId);
@@ -5309,12 +5472,13 @@ export async function renderStudents(area, options = {}) {
         width: '46px',
         minWidth: '42px',
         render: (row) => {
-          const avatarUri = row.photo_url || generateAvatarDataUri(row.displayName || row.name, row.gender);
+          const cachedPhoto = getCachedStudentPhoto(row.id);
+          const avatarUri = cachedPhoto || row.photo_url || generateAvatarDataUri(row.displayName || row.name, row.gender);
           return `
             <div style="display:flex;align-items:center;justify-content:center;cursor:pointer;"
                  onclick="event.stopPropagation();if(typeof window.showStudentDossierModal==='function')window.showStudentDossierModal('${row.id}');"
                  title="Click to view official academic report (A4 Dossier)">
-              <img src="${avatarUri}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(row.displayName || row.name, row.gender)}';"
+              <img data-stu-pic-id="${row.id}" src="${avatarUri}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(row.displayName || row.name, row.gender)}';"
                    style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">
             </div>
           `;
@@ -5818,6 +5982,18 @@ export async function renderStudents(area, options = {}) {
   if (stuTable && typeof window.initColumnResize === 'function') {
     window.initColumnResize(stuTable, 'topscore_col_widths_student_roster_grid');
   }
+
+  // Hydrate visible student photos from IndexedDB cache (0-egress on repeat visits)
+  let _photoHydrateTimer = null;
+  const schedulePhotoHydration = () => {
+    clearTimeout(_photoHydrateTimer);
+    _photoHydrateTimer = setTimeout(() => {
+      hydrateVisibleStudentPhotos(gridContainer, filteredGridData);
+    }, 40);
+  };
+  schedulePhotoHydration();
+  const _photoObserver = new MutationObserver(() => schedulePhotoHydration());
+  _photoObserver.observe(gridContainer, { childList: true, subtree: true });
 
   // Attach Inline Editing Auto-Save Listeners
   gridContainer.addEventListener('change', async (e) => {
@@ -7295,9 +7471,9 @@ export async function openStudentFullEdit(student, onSaved) {
   const initialGender = draftData?.gender ?? (student?.gender || '');
   const initialBirthplace = draftData?.birthplace ?? (student?.birthplace || '');
   const initialBirth = draftData?.birth_date ?? (student?.birth_date || '');
-  const initialProvince = draftData?.province ?? (student?.province || 'Nusa Tenggara Barat');
+  const initialProvince = draftData?.province ?? (student?.province || '');
   let canonicalProv = initialProvince;
-  if (typeof PROVINCE_DISPLAY_MAP !== 'undefined') {
+  if (canonicalProv && typeof PROVINCE_DISPLAY_MAP !== 'undefined') {
     for (const [fullName, shortName] of Object.entries(PROVINCE_DISPLAY_MAP)) {
       if (initialProvince.toLowerCase() === shortName.toLowerCase() || initialProvince.toLowerCase() === fullName.toLowerCase()) {
         canonicalProv = fullName;
@@ -7306,10 +7482,9 @@ export async function openStudentFullEdit(student, onSaved) {
     }
   }
 
-  const initialCity = draftData?.city ?? (student?.city || 'Kota Mataram');
-  const defAddress = getDefaultDistrictAndVillage(initialCity, canonicalProv);
-  const initialDistrict = draftData?.district ?? (student?.district || defAddress.district);
-  const initialVillage = draftData?.village ?? (student?.village || defAddress.village);
+  const initialCity = draftData?.city ?? (student?.city || '');
+  const initialDistrict = draftData?.district ?? (student?.district || '');
+  const initialVillage = draftData?.village ?? (student?.village || '');
   const initialPin = draftData?.pin ?? (student?.pin || '');
   const initialBatchId = draftData?.batch_id ?? (student?.batch_id || '');
   const initialLevelId = draftData?.level_id ?? (student?.level_id || '');
@@ -7326,28 +7501,28 @@ export async function openStudentFullEdit(student, onSaved) {
     } catch (_) {}
   }
 
-  // Build options for address dropdowns
+  // Build options for address dropdowns (empty placeholder first when unassigned)
   const provKeys = (typeof INDONESIA_REGIONS !== 'undefined') ? Object.keys(INDONESIA_REGIONS).sort((a, b) => a.localeCompare(b, 'en')) : [];
-  const bfeProvOptions = provKeys.map(p => {
-    const isSel = (p.toLowerCase() === canonicalProv.toLowerCase()) || (p.toLowerCase() === initialProvince.toLowerCase());
+  const bfeProvOptions = `<option value="" ${!canonicalProv ? 'selected' : ''}>-- Select Province --</option>` + provKeys.map(p => {
+    const isSel = canonicalProv && ((p.toLowerCase() === canonicalProv.toLowerCase()) || (p.toLowerCase() === initialProvince.toLowerCase()));
     return `<option value="${p}" ${isSel ? 'selected' : ''}>${escapeHtml(formatProvinceName(p))}</option>`;
   }).join('');
 
-  const cityList = (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[canonicalProv]) ? INDONESIA_REGIONS[canonicalProv] : [];
-  const bfeCityOptions = cityList.map(c => {
-    const isSel = (c.toLowerCase() === initialCity.toLowerCase()) || (formatCityDistrict(c).toLowerCase() === formatCityDistrict(initialCity).toLowerCase());
+  const cityList = (canonicalProv && typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[canonicalProv]) ? INDONESIA_REGIONS[canonicalProv] : [];
+  const bfeCityOptions = `<option value="" ${!initialCity ? 'selected' : ''}>-- Select Regency --</option>` + cityList.map(c => {
+    const isSel = initialCity && ((c.toLowerCase() === initialCity.toLowerCase()) || (formatCityDistrict(c).toLowerCase() === formatCityDistrict(initialCity).toLowerCase()));
     return `<option value="${c}" ${isSel ? 'selected' : ''}>${escapeHtml(formatCityDistrict(c))}</option>`;
   }).join('');
 
-  const distList = getDistrictsForCity(initialCity);
-  const bfeDistOptions = distList.map(d => {
-    const isSel = formatDistrictName(d).toLowerCase() === formatDistrictName(initialDistrict).toLowerCase();
+  const distList = initialCity ? getDistrictsForCity(initialCity) : [];
+  const bfeDistOptions = `<option value="" ${!initialDistrict ? 'selected' : ''}>-- Select District --</option>` + distList.map(d => {
+    const isSel = initialDistrict && formatDistrictName(d).toLowerCase() === formatDistrictName(initialDistrict).toLowerCase();
     return `<option value="${d}" ${isSel ? 'selected' : ''}>${escapeHtml(formatDistrictName(d))}</option>`;
   }).join('');
 
-  const villList = getVillagesForDistrict(initialCity, initialDistrict);
-  const bfeVillOptions = villList.map(v => {
-    const isSel = formatVillageName(v).toLowerCase() === formatVillageName(initialVillage).toLowerCase();
+  const villList = (initialCity && initialDistrict) ? getVillagesForDistrict(initialCity, initialDistrict) : [];
+  const bfeVillOptions = `<option value="" ${!initialVillage ? 'selected' : ''}>-- Select Village --</option>` + villList.map(v => {
+    const isSel = initialVillage && formatVillageName(v).toLowerCase() === formatVillageName(initialVillage).toLowerCase();
     return `<option value="${v}" ${isSel ? 'selected' : ''}>${escapeHtml(formatVillageName(v))}</option>`;
   }).join('');
 
@@ -7508,24 +7683,38 @@ export async function openStudentFullEdit(student, onSaved) {
 
   const syncBfeVillages = () => {
     if (!bfeCity || !bfeDist || !bfeVill) return;
+    if (!bfeCity.value || !bfeDist.value) {
+      bfeVill.innerHTML = '<option value="" selected>-- Select Village --</option>';
+      updateDraft();
+      return;
+    }
     const villages = getVillagesForDistrict(bfeCity.value, bfeDist.value);
-    bfeVill.innerHTML = villages.map(v => `<option value="${v}">${escapeHtml(formatVillageName(v))}</option>`).join('');
-    if (villages.length > 0) bfeVill.value = villages[0];
+    bfeVill.innerHTML = '<option value="">-- Select Village --</option>' + villages.map(v => `<option value="${v}">${escapeHtml(formatVillageName(v))}</option>`).join('');
     updateDraft();
   };
 
   const syncBfeDistricts = () => {
     if (!bfeCity || !bfeDist) return;
+    if (!bfeCity.value) {
+      bfeDist.innerHTML = '<option value="" selected>-- Select District --</option>';
+      if (bfeVill) bfeVill.innerHTML = '<option value="" selected>-- Select Village --</option>';
+      updateDraft();
+      return;
+    }
     const districts = getDistrictsForCity(bfeCity.value);
-    const def = getDefaultDistrictAndVillage(bfeCity.value);
-    bfeDist.innerHTML = districts.map(d => `<option value="${d}" ${d === def.district ? 'selected' : ''}>${escapeHtml(formatDistrictName(d))}</option>`).join('');
-    bfeDist.value = def.district;
-    syncBfeVillages();
-    if (bfeVill) bfeVill.value = def.village;
+    bfeDist.innerHTML = '<option value="" selected>-- Select District --</option>' + districts.map(d => `<option value="${d}">${escapeHtml(formatDistrictName(d))}</option>`).join('');
+    if (bfeVill) bfeVill.innerHTML = '<option value="" selected>-- Select Village --</option>';
     updateDraft();
   };
 
   bfeProv?.addEventListener('change', () => {
+    if (!bfeProv.value) {
+      if (bfeCity) bfeCity.innerHTML = '<option value="" selected>-- Select Regency --</option>';
+      if (bfeDist) bfeDist.innerHTML = '<option value="" selected>-- Select District --</option>';
+      if (bfeVill) bfeVill.innerHTML = '<option value="" selected>-- Select Village --</option>';
+      updateDraft();
+      return;
+    }
     let cp = bfeProv.value;
     if (typeof PROVINCE_DISPLAY_MAP !== 'undefined') {
       for (const [fullName, shortName] of Object.entries(PROVINCE_DISPLAY_MAP)) {
@@ -7537,9 +7726,9 @@ export async function openStudentFullEdit(student, onSaved) {
     }
     const cities = (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[cp]) ? INDONESIA_REGIONS[cp] : [];
     if (bfeCity) {
-      bfeCity.innerHTML = cities.map(c => `<option value="${c}">${escapeHtml(formatCityDistrict(c))}</option>`).join('');
-      if (cities.length > 0) bfeCity.value = cities[0];
-      syncBfeDistricts();
+      bfeCity.innerHTML = '<option value="" selected>-- Select Regency --</option>' + cities.map(c => `<option value="${c}">${escapeHtml(formatCityDistrict(c))}</option>`).join('');
+      if (bfeDist) bfeDist.innerHTML = '<option value="" selected>-- Select District --</option>';
+      if (bfeVill) bfeVill.innerHTML = '<option value="" selected>-- Select Village --</option>';
     }
     updateDraft();
   });
@@ -7637,6 +7826,7 @@ export async function openStudentFullEdit(student, onSaved) {
 
       if (finalStudentId) {
         await adminUpdate('students', finalStudentId, payload);
+        await setCachedStudentPhoto(finalStudentId, currentPhotoUrl || '');
         showToast('Student updated successfully.', 'success');
       } else {
         // Pre-check for duplicate student in the same institution and program

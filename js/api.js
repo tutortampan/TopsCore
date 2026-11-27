@@ -2630,8 +2630,9 @@ export async function startTest(studentId, testId) {
     throw lockErr;
   }
 
-  // Guard: Test Session Access & Attendance Whitelist (for formal EXAM category)
-  if (isFormalExam && !isFlexible && (asmData.schedule_mode === 'strict' || asmData.payload?.test_session)) {
+  // Guard: Strict Exam Session Access & Attendance Whitelist (ALL formal exams require active Tutor-opened session, even for Alumni or flexible mode)
+  const isStandaloneExamExempt = isPretest(asmData) || isVocabQuiz(asmData) || asmData.payload?.is_standalone_tryout === true;
+  if (isFormalExam && !isStandaloneExamExempt) {
     const accessCheck = await checkStudentTestAccess(studentId, testId);
     if (!accessCheck.allowed) {
       const err = new Error(accessCheck.message);
@@ -2643,11 +2644,14 @@ export async function startTest(studentId, testId) {
   }
   } // End if (!attempt && !isAlumniStudent)
 
-  // Enforce session lock on resumed attempts for formal exams (cannot resume closed sessions)
-  if (attempt && !isAlumniStudent && isFormalExam && !isFlexible) {
+  // Enforce strict session lock on ALL formal exams (both new & resumed attempts, and even for Alumni or missing test_session)
+  if (isFormalExam && !isStandaloneExamExempt) {
     const liveSess = asmData.payload?.test_session;
-    if (liveSess && (liveSess.status === 'LOCKED' || (liveSess.auto_close_at && new Date(liveSess.auto_close_at) <= new Date()))) {
-      const lockErr = new Error('This test session has been closed by the Tutor. Access is locked.');
+    const isSessOpen = liveSess && liveSess.status === 'UNLOCKED' && (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date());
+    const allowedIds = Array.isArray(liveSess?.allowed_student_ids) ? liveSess.allowed_student_ids : [];
+    const isWhitelisted = isSessOpen && (allowedIds.length === 0 || allowedIds.includes(studentId));
+    if (!isWhitelisted) {
+      const lockErr = new Error('This exam session has not been opened by the Tutor or has already closed. Access is locked.');
       lockErr.code = 'SESSION_LOCKED';
       lockErr.status = 403;
       throw lockErr;
@@ -6768,10 +6772,21 @@ export async function upsertDynamicTestShell(config) {
   }
 }
 
+function extractThemeCodeFromTestRow(row) {
+  const rawPayloadCode = row?.payload?.theme_code;
+  if (rawPayloadCode) return String(rawPayloadCode).trim().toUpperCase();
+  const shellMatch = row?.shell_code && row.shell_code.match(/-\d?([A-Z])(?:\d+)?-(?:TASK|EXAM|TEST|QUIZ)/i);
+  if (shellMatch) return shellMatch[1].toUpperCase();
+  const titleMatch = row?.title && row.title.match(/(?:Task|Exam|Test|Vocabulary)\s+\d?([A-Z])(?:\d+)?/i);
+  if (titleMatch) return titleMatch[1].toUpperCase();
+  return '';
+}
+
 export async function updateClassTestsConfig(params = {}) {
   const sb = await getSupabase();
   const {
     classId,
+    themeCodes = null,
     taskDurationMinutes = 15,
     wordsTaskDurationMinutes = 15,
     phrasesTaskDurationMinutes = 10,
@@ -6800,8 +6815,45 @@ export async function updateClassTestsConfig(params = {}) {
 
   let updatedTasks = 0;
   let updatedTests = 0;
+  const allowedThemes = (Array.isArray(themeCodes) && themeCodes.length > 0)
+    ? new Set(themeCodes.map(t => String(t).trim().toUpperCase()))
+    : null;
+
+  // Build actual Vault question count lookup per topic_code and theme_code for this class
+  const vaultTopicWords = new Map();
+  const vaultTopicPhrases = new Map();
+  const vaultThemeWords = new Map();
+  const vaultThemePhrases = new Map();
+  try {
+    const { data: clsInfo } = await sb.from('classes').select('program_id, levels!level_id(level_number)').eq('id', classId).maybeSingle();
+    const lvlNum = clsInfo?.levels?.level_number;
+    const progId = clsInfo?.program_id;
+    if (lvlNum !== undefined && lvlNum !== null) {
+      let vq = sb.from('vocab_words').select('theme_code, topic_code, word_type, category, program_id').eq('target_level', lvlNum);
+      if (progId) vq = vq.or(`program_id.eq.${progId},program_id.is.null`);
+      const { data: vWords } = await vq;
+      for (const w of (vWords || [])) {
+        const tc = String(w.theme_code || '').trim().toUpperCase();
+        const top = String(w.topic_code || '').trim().toUpperCase();
+        const wt = String(w.word_type || '').toLowerCase();
+        const isPhr = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt) || w.category === 'phrases';
+        if (tc) {
+          if (isPhr) vaultThemePhrases.set(tc, (vaultThemePhrases.get(tc) || 0) + 1);
+          else vaultThemeWords.set(tc, (vaultThemeWords.get(tc) || 0) + 1);
+        }
+        if (top) {
+          if (isPhr) vaultTopicPhrases.set(top, (vaultTopicPhrases.get(top) || 0) + 1);
+          else vaultTopicWords.set(top, (vaultTopicWords.get(top) || 0) + 1);
+        }
+      }
+    }
+  } catch (_) {}
 
   for (const row of rows) {
+    if (allowedThemes) {
+      const rowTheme = extractThemeCodeFromTestRow(row);
+      if (!allowedThemes.has(rowTheme)) continue;
+    }
     const isTest = String(row.category).toUpperCase() === 'EXAM'
       || String(row.category).toUpperCase() === 'TEST'
       || String(row.test_type).toUpperCase() === 'EXAM'
@@ -6820,15 +6872,19 @@ export async function updateClassTestsConfig(params = {}) {
       updateData.answer_type = testAns;
       updateData.question_order = examQuestionOrder;
 
-      // Extract theme code to calculate expected question count
+      // Extract theme code to calculate actual Vault question count
       const thMatch = (row.shell_code && row.shell_code.match(/([A-H])(?:-|$)/i)) || (row.title && row.title.match(/Vocabulary\s+([A-H])/i));
-      const th = (row.payload?.theme_code || (thMatch ? thMatch[1] : 'A')).toUpperCase();
-      let qCount = 120;
-      if (th === 'A') qCount = isPhrase ? 30 : 120;
-      else if (th === 'B') qCount = isPhrase ? 70 : 280;
-      else if (th === 'C') qCount = isPhrase ? 110 : 440;
-      else if (th === 'D') qCount = isPhrase ? 150 : 600;
-      else qCount = isPhrase ? 30 : 120;
+      const th = (row.payload?.theme_code || extractThemeCodeFromTestRow(row) || (thMatch ? thMatch[1] : 'A')).toUpperCase();
+      const vaultExamCount = isPhrase ? (vaultThemePhrases.get(th) || 0) : (vaultThemeWords.get(th) || 0);
+      const payloadExamCount = Number(row.payload?.total_questions || row.payload?.words_count || 0);
+      let qCount = vaultExamCount || payloadExamCount || 120;
+      if (!vaultExamCount && !payloadExamCount) {
+        if (th === 'A') qCount = isPhrase ? 30 : 120;
+        else if (th === 'B') qCount = isPhrase ? 70 : 280;
+        else if (th === 'C') qCount = isPhrase ? 110 : 440;
+        else if (th === 'D') qCount = isPhrase ? 150 : 600;
+        else qCount = isPhrase ? 30 : 120;
+      }
 
       const customPace = isPhrase ? params.phrasesExamPaceSeconds : params.wordsExamPaceSeconds;
       const customDur = isPhrase ? params.phrasesExamDurationMinutes : params.wordsExamDurationMinutes;
@@ -6852,7 +6908,10 @@ export async function updateClassTestsConfig(params = {}) {
       const taskAns = isPhrase
         ? (phrasesTaskAnswerType || taskAnswerType || 'spoken')
         : (wordsTaskAnswerType || taskAnswerType || 'spoken');
-      const qCount = isPhrase ? 10 : 40;
+      const topCode = String(row.payload?.topic_code || '').trim().toUpperCase();
+      const vaultTaskCount = topCode ? (isPhrase ? (vaultTopicPhrases.get(topCode) || 0) : (vaultTopicWords.get(topCode) || 0)) : 0;
+      const payloadTaskCount = Number(row.payload?.total_questions || row.payload?.words_count || 0);
+      const qCount = vaultTaskCount || payloadTaskCount || (isPhrase ? 10 : 40);
       const customPace = isPhrase ? params.phrasesTaskPaceSeconds : params.wordsTaskPaceSeconds;
       const customDur = isPhrase ? phrasesTaskDurationMinutes : (wordsTaskDurationMinutes || taskDurationMinutes);
       const dur = (customDur && Number(customDur) > 0 && !customPace)
@@ -6883,28 +6942,30 @@ export async function updateClassTestsConfig(params = {}) {
     if (updErr) throw updErr;
   }
 
-  try {
-    const configSettings = {
-      taskMinScore: taskPassingScore,
-      examMinScore: testPassingScore,
-      wordsTaskDur: wordsTaskDurationMinutes || taskDurationMinutes,
-      phrasesTaskDur: phrasesTaskDurationMinutes,
-      wordsTaskPace: params.wordsTaskPaceSeconds,
-      phrasesTaskPace: params.phrasesTaskPaceSeconds,
-      wordsExamPace: params.wordsExamPaceSeconds,
-      phrasesExamPace: params.phrasesExamPaceSeconds,
-      wordsTaskAnswer: wordsTaskAnswerType || taskAnswerType,
-      phrasesTaskAnswer: phrasesTaskAnswerType || taskAnswerType,
-      wordsExamAnswer: wordsTestAnswerType,
-      phrasesExamAnswer: phrasesTestAnswerType,
-      taskQuestionOrder,
-      examQuestionOrder
-    };
-    if (taskRepetitions != null) {
-      configSettings.taskRepetitions = Math.max(1, Number(taskRepetitions));
-    }
-    await saveClassTestSettings(classId, configSettings, false);
-  } catch (_) {}
+  if (!allowedThemes) {
+    try {
+      const configSettings = {
+        taskMinScore: taskPassingScore,
+        examMinScore: testPassingScore,
+        wordsTaskDur: wordsTaskDurationMinutes || taskDurationMinutes,
+        phrasesTaskDur: phrasesTaskDurationMinutes,
+        wordsTaskPace: params.wordsTaskPaceSeconds,
+        phrasesTaskPace: params.phrasesTaskPaceSeconds,
+        wordsExamPace: params.wordsExamPaceSeconds,
+        phrasesExamPace: params.phrasesExamPaceSeconds,
+        wordsTaskAnswer: wordsTaskAnswerType || taskAnswerType,
+        phrasesTaskAnswer: phrasesTaskAnswerType || taskAnswerType,
+        wordsExamAnswer: wordsTestAnswerType,
+        phrasesExamAnswer: phrasesTestAnswerType,
+        taskQuestionOrder,
+        examQuestionOrder
+      };
+      if (taskRepetitions != null) {
+        configSettings.taskRepetitions = Math.max(1, Number(taskRepetitions));
+      }
+      await saveClassTestSettings(classId, configSettings, false);
+    } catch (_) {}
+  }
 
   clearApiCache('tests');
   clearApiCache('vault');
@@ -7058,15 +7119,19 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       const category = isPhrase ? 'phrases' : 'vocab';
 
       if (!themeMap.has(w.theme_code)) {
-         themeMap.set(w.theme_code, { name: w.theme, topics: new Map(), wordCount: 0 });
+         themeMap.set(w.theme_code, { name: w.theme, topics: new Map(), wordCount: 0, vocabCount: 0, phraseCount: 0 });
       }
       themeMap.get(w.theme_code).wordCount++;
+      if (category === 'phrases') themeMap.get(w.theme_code).phraseCount++;
+      else themeMap.get(w.theme_code).vocabCount++;
 
       const topicsMap = themeMap.get(w.theme_code).topics;
       if (!topicsMap.has(w.topic_code)) {
-        topicsMap.set(w.topic_code, { name: w.topic, hasVocab: false, hasPhrases: false, wordCount: 0 });
+        topicsMap.set(w.topic_code, { name: w.topic, hasVocab: false, hasPhrases: false, wordCount: 0, vocabCount: 0, phraseCount: 0 });
       }
       topicsMap.get(w.topic_code).wordCount++;
+      if (category === 'phrases') topicsMap.get(w.topic_code).phraseCount++;
+      else topicsMap.get(w.topic_code).vocabCount++;
 
       if (category === 'phrases') topicsMap.get(w.topic_code).hasPhrases = true;
       if (category === 'vocab') topicsMap.get(w.topic_code).hasVocab = true;
@@ -7096,8 +7161,43 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     const isWordsOnlyProgram = levelNum === 0 || levelNum === 2 || ['EVNK', 'SHRT', 'TPTC'].includes(resolvedProgCode);
     const isUnifiedMode = !isWordsOnlyProgram && (config.category === 'unified' || config.unified === true);
 
+    const allowedThemes = (Array.isArray(config.themeCodes) && config.themeCodes.length > 0)
+      ? new Set(config.themeCodes.map(t => String(t).trim().toUpperCase()))
+      : null;
+
+    let existingTestsByTheme = new Map();
+    if (allowedThemes && targetClassId) {
+      try {
+        const { data: exTests } = await sb.from('tests')
+          .select('id, shell_code, title, display_order, payload')
+          .eq('class_id', targetClassId)
+          .is('deleted_at', null)
+          .order('display_order', { ascending: true });
+        for (const et of (exTests || [])) {
+          const etc = extractThemeCodeFromTestRow(et);
+          if (!etc) continue;
+          if (!existingTestsByTheme.has(etc)) existingTestsByTheme.set(etc, []);
+          existingTestsByTheme.get(etc).push(et);
+        }
+      } catch (_) {}
+    }
+
     // 3. Generate Tests in strict Linear Sequential Chain
     for (const themeCode of sortedThemes) {
+      if (allowedThemes && !allowedThemes.has(String(themeCode).trim().toUpperCase())) {
+        const exList = existingTestsByTheme.get(String(themeCode).trim().toUpperCase()) || [];
+        if (exList.length > 0) {
+          const lastEx = exList[exList.length - 1];
+          lastTaskId = lastEx.id;
+          const maxOrder = Math.max(...exList.map(x => Number(x.display_order) || 0));
+          displayOrder = Math.max(displayOrder, maxOrder + 1);
+        } else {
+          const topicCount = themeMap.get(themeCode)?.topics?.size || 0;
+          const mult = (isUnifiedMode || isWordsOnlyProgram) ? 1 : 2;
+          displayOrder += (topicCount * mult) + mult;
+        }
+        continue;
+      }
       const themeData = themeMap.get(themeCode);
       const sortedTopics = Array.from(themeData.topics.keys()).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
@@ -7135,6 +7235,10 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           // 1. Words Task (First in topic pair)
           if (topicObj.hasVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
             hasAnyVocab = true;
+            const topicWordsCount = topicObj.vocabCount || topicObj.wordCount || 20;
+            const dynamicWordsDur = (config.wordsTaskDurationMinutes !== undefined && config.wordsTaskDurationMinutes !== null)
+              ? Number(config.wordsTaskDurationMinutes)
+              : calculateAutoDurationMinutes(topicWordsCount, wordsTaskAns, 'words', config.wordsTaskPaceSeconds);
             const { testId, action } = await upsertShell({
               institutionId, programId, levelId, classId: targetClassId, levelNum,
               tier: 'TASK', themeName: themeData.name, topicName: topicName,
@@ -7144,7 +7248,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
               moduleId: vocabModuleId,
               answerType: wordsTaskAns,
               totalQuestions: (levelNum === 0 && topicObj.wordCount) ? topicObj.wordCount : undefined,
-              durationMinutes: wordsTaskDur,
+              durationMinutes: dynamicWordsDur,
               minimumRequiredScore: taskPass,
               prerequisiteId: topicPrereqId,
               displayOrder: displayOrder++,
@@ -7158,6 +7262,10 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           // 2. Phrases Task (Peer in topic pair, shares same topicPrereqId) — Strictly skipped for Level 2 (Zero-Phrases SSOT per Rule 2.7.1)
           if (levelNum !== 2 && topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
             hasAnyPhrases = true;
+            const topicPhrasesCount = topicObj.phraseCount || 10;
+            const dynamicPhrasesDur = (config.phrasesTaskDurationMinutes !== undefined && config.phrasesTaskDurationMinutes !== null)
+              ? Number(config.phrasesTaskDurationMinutes)
+              : calculateAutoDurationMinutes(topicPhrasesCount, phrasesTaskAns, 'phrases', config.phrasesTaskPaceSeconds, 1);
             const { testId, action } = await upsertShell({
               institutionId, programId, levelId, classId: targetClassId, levelNum,
               tier: 'TASK', themeName: themeData.name, topicName: topicName,
@@ -7166,7 +7274,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
               modulePrefix: 'PHRASE', category: 'phrases',
               moduleId: phraseModuleId,
               answerType: phrasesTaskAns,
-              durationMinutes: phrasesTaskDur,
+              durationMinutes: dynamicPhrasesDur,
               minimumRequiredScore: taskPass,
               prerequisiteId: topicPrereqId,
               displayOrder: displayOrder++,
@@ -7216,6 +7324,10 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         // 3. Words Exam (First in exam pair)
         if (hasAnyVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
           const examQCount = (levelNum === 0 && themeData.wordCount) ? themeData.wordCount : undefined;
+          const themeWordsCount = themeData.vocabCount || themeData.wordCount || 120;
+          const dynamicWordsExamDur = (config.wordsExamDurationMinutes !== undefined && config.wordsExamDurationMinutes !== null)
+            ? Number(config.wordsExamDurationMinutes)
+            : calculateAutoDurationMinutes(themeWordsCount, wordsTestAns, 'words', config.wordsExamPaceSeconds);
           const { testId, action } = await upsertShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'EXAM', themeName: themeData.name, topicName: null,
@@ -7225,7 +7337,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             moduleId: vocabModuleId,
             answerType: wordsTestAns,
             totalQuestions: examQCount,
-            durationMinutes: config.wordsExamDurationMinutes || null,
+            durationMinutes: dynamicWordsExamDur,
             minimumRequiredScore: testPass,
             prerequisiteId: lastThemeTaskId,
             displayOrder: displayOrder++,
@@ -7238,6 +7350,10 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
 
         // 4. Phrases Exam (Peer in exam pair, shares same lastThemeTaskId) — Strictly skipped for Level 2 (Zero-Phrases SSOT per Rule 2.7.1)
         if (levelNum !== 2 && hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
+          const themePhrasesCount = themeData.phraseCount || 30;
+          const dynamicPhrasesExamDur = (config.phrasesExamDurationMinutes !== undefined && config.phrasesExamDurationMinutes !== null)
+            ? Number(config.phrasesExamDurationMinutes)
+            : calculateAutoDurationMinutes(themePhrasesCount, phrasesTestAns, 'phrases', config.phrasesExamPaceSeconds, 1);
           const { testId, action } = await upsertShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'EXAM', themeName: themeData.name, topicName: null,
@@ -7246,7 +7362,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             modulePrefix: 'PHRASE', category: 'phrases',
             moduleId: phraseModuleId,
             answerType: phrasesTestAns,
-            durationMinutes: config.phrasesExamDurationMinutes || null,
+            durationMinutes: dynamicPhrasesExamDur,
             minimumRequiredScore: testPass,
             prerequisiteId: lastThemeTaskId,
             displayOrder: displayOrder++,
@@ -8100,13 +8216,8 @@ export async function checkStudentTestAccess(studentId, testId) {
                        !(asm.test_type || '').toLowerCase().includes('task') &&
     !(asm.test_type || '').toLowerCase().includes('quiz');
 
-  if (!isFormalExam) {
+  if (!isFormalExam || isPretest(asm) || isVocabQuiz(asm) || asm.payload?.is_standalone_tryout === true) {
     return { allowed: true, is_test: false };
-  }
-
-  const isFlexible = (asm.schedule_mode || asm.payload?.schedule_mode) === 'flexible';
-  if (isFlexible) {
-    return { allowed: true, is_test: true, is_flexible: true };
   }
 
   const session = asm.payload?.test_session;

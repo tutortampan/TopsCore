@@ -1105,16 +1105,23 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
                              !(testData?.test_type || '').toLowerCase().includes('task') &&
           !(testData?.test_type || '').toLowerCase().includes('quiz');
 
+        const isStandaloneTestExempt = testData?.payload?.is_standalone_tryout === true ||
+          (testData?.shell_code || '').toUpperCase().startsWith('PRETEST-') ||
+          (testData?.shell_code || '').toUpperCase().startsWith('QUIZ-') ||
+          (testData?.test_subtype || '').toUpperCase() === 'VOCAB_PRETEST' ||
+          (testData?.test_subtype || '').toUpperCase() === 'VOCAB_QUIZ_TEST';
         const liveSession = testData?.payload?.test_session;
-        if (!isAlumni && isFormalExam && liveSession) {
-          const isSessClosed = liveSession.status === 'LOCKED' || (liveSession.auto_close_at && new Date(liveSession.auto_close_at) <= new Date());
-          if (isSessClosed) {
+        if (isFormalExam && !isStandaloneTestExempt) {
+          const isSessOpen = liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > new Date());
+          const allowedIds = Array.isArray(liveSession?.allowed_student_ids) ? liveSession.allowed_student_ids : [];
+          const isStudentAllowed = isSessOpen && (allowedIds.length === 0 || allowedIds.includes(session?.student_id || session?.id));
+          if (!isStudentAllowed) {
             const main = document.getElementById('test-main');
             if (main) {
               main.innerHTML = `
                 <div class="glass-panel text-center p-5 mx-auto" style="max-width:500px;margin-top:10vh;">
-                  <h2 class="fw-800 text-xl mb-3" style="color:var(--grade-e);">${getSvgIcon('lock', 20)} Session Closed</h2>
-                  <p class="text-sm" style="color:var(--clr-text-2);">This test session has been closed by the Tutor. Access is locked.</p>
+                  <h2 class="fw-800 text-xl mb-3" style="color:var(--grade-e);">${getSvgIcon('lock', 20)} Session Locked</h2>
+                  <p class="text-sm" style="color:var(--clr-text-2);">This exam session has not been opened by the Tutor or has already closed. Access is locked.</p>
                   <button class="btn btn-primary mt-4" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
                 </div>
               `;
@@ -1945,22 +1952,36 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       const display = document.getElementById('timer-display');
       timerEl.classList.remove('warning', 'critical');
 
+      let totalDurationSeconds = 0;
+      if (isSectionTimer && currentSection?.time_limit_minutes) {
+        totalDurationSeconds = Number(currentSection.time_limit_minutes) * 60;
+      } else if (attemptData?.started_at && attemptData?.expected_end_at) {
+        totalDurationSeconds = Math.max(1, Math.round((new Date(attemptData.expected_end_at) - new Date(attemptData.started_at)) / 1000));
+      } else if (testData?.working_duration_minutes) {
+        totalDurationSeconds = Number(testData.working_duration_minutes) * 60;
+      } else {
+        totalDurationSeconds = Math.max(1, Math.floor((activeEndAt.getTime() - Date.now()) / 1000));
+      }
+
+      const graceThreshold = Math.min(60, Math.max(15, Math.round(totalDurationSeconds * 0.10)));
+
       timerController = startCountdown(activeEndAt.toISOString(), {
+        totalSeconds: totalDurationSeconds,
         onTick(remaining) {
           display.textContent = formatTime(remaining);
-          if (remaining <= 60) {
+          if (remaining <= graceThreshold) {
             updateGracePeriodBanner(remaining);
           } else if (_isGracePeriodActive) {
             updateGracePeriodBanner(remaining);
           }
         },
-        onWarning(remaining) {
-          if (remaining <= 120) {
+        onWarning(remaining, tier) {
+          if (tier === 'critical') {
             timerEl.classList.add('critical');
-            showToast('Less than 2 minutes remaining!', 'warning', 5000);
+            showToast(`Only ${formatTime(remaining)} remaining!`, 'warning', 5000);
           } else {
             timerEl.classList.add('warning');
-            showToast('5 minutes remaining.', 'warning', 4000);
+            showToast(`${formatTime(remaining)} remaining.`, 'warning', 4000);
           }
         },
         onExpire() {
@@ -2173,12 +2194,15 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       if (fillEl) fillEl.style.width = pct + '%';
       const progressTextEl = document.getElementById('progress-text-percent');
       if (progressTextEl) progressTextEl.textContent = Math.round(pct) + '%';
+      const counterEl = document.getElementById('question-counter');
       const counterTextEl = document.getElementById('question-counter-text');
       if (counterTextEl) {
         counterTextEl.textContent = `${answered}/${allAnswerRows.length} Answered`;
-      } else {
-        const counterEl = document.getElementById('question-counter');
-        if (counterEl) counterEl.textContent = `${answered}/${allAnswerRows.length} answered`;
+      } else if (counterEl) {
+        counterEl.textContent = `${answered}/${allAnswerRows.length} answered`;
+      }
+      if (counterEl) {
+        counterEl.classList.toggle('is-complete', allAnswerRows.length > 0 && answered >= allAnswerRows.length);
       }
     }
 
@@ -2959,7 +2983,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         btn.setAttribute('tabindex', '0');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid var(--primary-tactical, #38bdf8)' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:12px; font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 2px 8px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '2px solid var(--primary-tactical, #38bdf8)' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'rgba(56, 189, 248, 0.22)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:14px; font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 0 1px rgba(56,189,248,0.25), 0 4px 12px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
 
         btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? 'var(--primary-tactical, #38bdf8)' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
 
@@ -2976,9 +3000,9 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           });
           btn.classList.add('selected');
           btn.setAttribute('aria-checked', 'true');
-          btn.style.border = '1.5px solid var(--primary-tactical, #38bdf8)';
-          btn.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)';
-          btn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
+          btn.style.border = '2px solid var(--primary-tactical, #38bdf8)';
+          btn.style.background = 'rgba(56, 189, 248, 0.22)';
+          btn.style.boxShadow = '0 0 0 1px rgba(56,189,248,0.25), 0 4px 12px rgba(0, 0, 0, 0.35)';
           btn.style.color = '#ffffff';
           const activeLetter = btn.querySelector('.mc-letter');
           if (activeLetter) { activeLetter.style.background = 'var(--primary-tactical, #38bdf8)'; activeLetter.style.color = '#000000'; }
@@ -3033,7 +3057,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         btn.className = `mc-option ${isSelected ? 'selected' : ''}`;
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid var(--primary-tactical, #38bdf8)' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:12px; cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 2px 8px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '2px solid var(--primary-tactical, #38bdf8)' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'rgba(56, 189, 248, 0.22)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:14px; cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 0 1px rgba(56,189,248,0.25), 0 4px 12px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
         btn.innerHTML = `<div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25;">${optText}</div>`;
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => {
@@ -3046,9 +3070,9 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           });
           btn.classList.add('selected');
           btn.setAttribute('aria-checked', 'true');
-          btn.style.border = '1.5px solid var(--primary-tactical, #38bdf8)';
-          btn.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16,185,129,0.2) 100%)';
-          btn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
+          btn.style.border = '2px solid var(--primary-tactical, #38bdf8)';
+          btn.style.background = 'rgba(56, 189, 248, 0.22)';
+          btn.style.boxShadow = '0 0 0 1px rgba(56,189,248,0.25), 0 4px 12px rgba(0, 0, 0, 0.35)';
           btn.style.color = '#ffffff';
           answeredMap[row.id] = optText;
           updateActiveChipOnly(row.id, optText);
@@ -3626,10 +3650,13 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         area.appendChild(areaFooter);
       }
 
+      const MIC_IDLE_SVG = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.08A7 7 0 0 0 19 11z"/></svg>';
+      const MIC_ACTIVE_SVG = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="9" width="3" height="6" rx="1.5"/><rect x="9.5" y="4" width="3" height="16" rx="1.5"/><rect x="15" y="7" width="3" height="10" rx="1.5"/><rect x="20" y="10" width="2.5" height="4" rx="1.25"/></svg>';
+
       const micBtn = document.createElement('button');
       micBtn.className = 'speech-mic-btn-lg';
       micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(148, 163, 184, 0.35); background:linear-gradient(135deg, #334155 0%, #1e293b 100%); color:#e2e8f0; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 4px 12px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
-      micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+      micBtn.innerHTML = MIC_IDLE_SVG;
 
       const micHelp = document.createElement('div');
       micHelp.style.cssText = 'margin-top:4px; font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.04em;';
@@ -3670,7 +3697,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             micBtn.style.borderColor = '#7dd3fc';
             micBtn.style.boxShadow = '';
             micBtn.style.color = '#ffffff';
-            micBtn.innerHTML = '<svg style="width:clamp(18px, 4.5vw, 24px); height:clamp(18px, 4.5vw, 24px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
+            micBtn.innerHTML = MIC_ACTIVE_SVG;
             statusEl.innerHTML = '● Listening <span class="speech-wave-bars"><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span></span>';
             statusEl.style.color = 'var(--primary-tactical, #38bdf8)';
             micHelp.textContent = 'Listening... (Tap to stop)';
@@ -3705,7 +3732,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             micBtn.style.borderColor = 'rgba(148, 163, 184, 0.35)';
             micBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35)';
             micBtn.style.color = '#e2e8f0';
-            micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+            micBtn.innerHTML = MIC_IDLE_SVG;
 
             // Fail-safe commit: If interim transcript exists in box but onFinal never fired, commit it!
             const boxText = (transcriptBox.textContent || '').trim();
@@ -3731,7 +3758,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             micBtn.style.borderColor = 'rgba(148, 163, 184, 0.35)';
             micBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35)';
             micBtn.style.color = '#e2e8f0';
-            micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+            micBtn.innerHTML = MIC_IDLE_SVG;
 
             // Suppress disruptive toasts for normal stops or intentional aborts
             const isNormalStop = !msg || msg.includes('stopped') || msg.includes('aborted');

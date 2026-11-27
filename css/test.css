@@ -1308,6 +1308,12 @@ body.test-page #fixed-bottom-area {
   box-sizing: border-box;
 }
 
+.question-counter.is-complete {
+  border-color: rgba(0, 192, 0, 0.55) !important;
+  background: linear-gradient(135deg, rgba(0, 192, 0, 0.16), rgba(15, 23, 42, 0.95)) !important;
+  color: var(--grade-a, #00c000) !important;
+}
+
 .test-progress-outer {
   width: 95% !important;
   max-width: 430px !important;
@@ -2626,7 +2632,7 @@ div:has(> a[href*="netlify.com"]) {
 
 .mc-option:active,
 .phrase-chip:active {
-  transform: none !important;
+  transform: scale(0.985) !important;
   opacity: 0.9 !important;
   transition: transform 0.05s ease !important;
 }

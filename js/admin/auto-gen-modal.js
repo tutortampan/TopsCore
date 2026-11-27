@@ -7,6 +7,7 @@
 import {
   fetchInstitutions,
   fetchPrograms,
+  fetchVaultWords,
   autoGenerateTestsHierarchy,
   updateClassTestsConfig,
   fetchClassTestSettings,
@@ -36,12 +37,16 @@ const KNOWN_VOCAB_CLASSES = [
  * Loads metadata and active configuration for all vocabulary classes
  */
 async function loadAllVocabClassesData() {
-  const [allClasses, allLevels, institutions, programs] = await Promise.all([
+  const sb = await getSupabase();
+  const [allClasses, allLevels, institutions, programs, allVaultWords, tpaRes] = await Promise.all([
     adminFetchAll('classes', 'id, name, code, is_active, program_id, level_id, institution_id, deleted_at').catch(() => []),
     adminFetchAll('levels', 'id, name, level_number').catch(() => []),
     fetchInstitutions().catch(() => []),
-    adminFetchAll('programs', 'id, name, code, institution_id').catch(() => [])
+    adminFetchAll('programs', 'id, name, code, institution_id').catch(() => []),
+    fetchVaultWords({ limit: 10000 }).catch(() => []),
+    sb.from('theme_program_assignments').select('theme_code, program_id, target_level').eq('is_active', true).then(r => r.data || []).catch(() => [])
   ]);
+  const tpaRows = Array.isArray(tpaRes) ? tpaRes : [];
 
   const levelMap = new Map((allLevels || []).map(l => [l.id, l]));
   const instMap = new Map((institutions || []).map(i => [i.id, i]));
@@ -97,12 +102,63 @@ async function loadAllVocabClassesData() {
       } catch (_) {}
     }
 
+    // Compute available themes for this class from cached vocabulary_vault + theme_program_assignments
+    const programId = matched?.program_id || null;
+    const tpaForLevel = tpaRows.filter(a => Number(a.target_level) === Number(kc.levelNumber));
+    const myThemes = new Set(tpaForLevel.filter(a => String(a.program_id) === String(programId)).map(a => String(a.theme_code || '').toUpperCase()));
+    const claimedByOthers = new Set(tpaForLevel.filter(a => String(a.program_id) !== String(programId)).map(a => String(a.theme_code || '').toUpperCase()));
+    const themeMap = new Map();
+    const topicWordsCount = new Map();
+    const topicPhrasesCount = new Map();
+    const themeWordsCount = new Map();
+    const themePhrasesCount = new Map();
+
+    for (const w of (allVaultWords || [])) {
+      if (Number(w.target_level) !== Number(kc.levelNumber)) continue;
+      if (w.program_id && programId && String(w.program_id) !== String(programId)) continue;
+      const tc = String(w.theme_code || '').trim().toUpperCase();
+      if (!tc) continue;
+      if (myThemes.size > 0 && !myThemes.has(tc)) continue;
+      if (myThemes.size === 0 && claimedByOthers.size > 0 && claimedByOthers.has(tc)) continue;
+      if (!themeMap.has(tc)) {
+        themeMap.set(tc, {
+          code: tc,
+          displayCode: kc.levelNumber === 0 ? `0${tc}` : tc,
+          name: String(w.theme || `Theme ${tc}`).trim()
+        });
+      }
+      const wt = String(w.word_type || '').toLowerCase();
+      const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt) || w.category === 'phrases';
+      const topCode = String(w.topic_code || '').trim().toUpperCase();
+      if (isPhrase) {
+        themePhrasesCount.set(tc, (themePhrasesCount.get(tc) || 0) + 1);
+        if (topCode) topicPhrasesCount.set(topCode, (topicPhrasesCount.get(topCode) || 0) + 1);
+      } else {
+        themeWordsCount.set(tc, (themeWordsCount.get(tc) || 0) + 1);
+        if (topCode) topicWordsCount.set(topCode, (topicWordsCount.get(topCode) || 0) + 1);
+      }
+    }
+    const themes = Array.from(themeMap.values()).sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' }));
+    const avgOfMap = (m, fallback) => {
+      const vals = Array.from(m.values()).filter(n => n > 0);
+      return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : fallback;
+    };
+    const vaultWordsPerTask = avgOfMap(topicWordsCount, 20);
+    const vaultPhrasesPerTask = avgOfMap(topicPhrasesCount, 10);
+    const vaultWordsPerExam = avgOfMap(themeWordsCount, kc.hasPhrases ? 30 : 20);
+    const vaultPhrasesPerExam = avgOfMap(themePhrasesCount, 10);
+
     enriched.push({
       ...kc,
       id: classId,
+      vaultWordsPerTask,
+      vaultPhrasesPerTask,
+      vaultWordsPerExam,
+      vaultPhrasesPerExam,
       rawClass: matched || null,
-      programId: matched?.program_id || null,
+      programId,
       institutionId: matched?.institution_id || null,
+      themes,
       settings
     });
   }
@@ -504,9 +560,11 @@ export async function renderVocabularySystemPage(container, options = {}) {
             institutionId: targetClass.institutionId,
             explicitClassId: currentActiveClassId,
             category: targetClass.hasPhrases ? 'all' : 'words',
-            taskDurationMinutes: vals.wordsTaskDur,
-            wordsTaskDurationMinutes: vals.wordsTaskDur,
-            phrasesTaskDurationMinutes: vals.phrasesTaskDur,
+            taskDurationMinutes: vals.wordsTaskQuestionsCustom ? vals.wordsTaskDur : null,
+            wordsTaskDurationMinutes: vals.wordsTaskQuestionsCustom ? vals.wordsTaskDur : null,
+            phrasesTaskDurationMinutes: vals.phrasesTaskQuestionsCustom ? vals.phrasesTaskDur : null,
+            wordsExamDurationMinutes: vals.wordsExamQuestionsCustom ? vals.wordsExamDur : null,
+            phrasesExamDurationMinutes: vals.phrasesExamQuestionsCustom ? vals.phrasesExamDur : null,
             wordsTaskPaceSeconds: vals.wordsTaskPace,
             phrasesTaskPaceSeconds: vals.phrasesTaskPace,
             wordsExamPaceSeconds: vals.wordsExamPace,
@@ -583,8 +641,68 @@ export async function openVocabularySystemModal(options = {}) {
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;animation:fadeIn 0.15s ease-out;';
 
     let currentScope = 'this';
+    let selectedThemes = null; // null = ALL THEMES, Set<string> = specific theme codes
     let previewFilterMode = 'active'; // 'active' (4 rows) or 'all' (24 rows)
     let isPreviewVisible = true;
+
+    const getAvailableThemesForScope = (activeClass) => {
+      if (currentScope === 'all') {
+        const unionMap = new Map();
+        for (const vc of vocabClasses) {
+          for (const t of (vc.themes || [])) {
+            if (!unionMap.has(t.code)) {
+              unionMap.set(t.code, { code: t.code, displayCode: t.code, name: t.name });
+            }
+          }
+        }
+        return Array.from(unionMap.values()).sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' }));
+      }
+      return activeClass?.themes || [];
+    };
+
+    const buildThemeSelectorRowHtml = (activeClass) => {
+      const availableThemes = getAvailableThemesForScope(activeClass);
+      const isAllMode = !selectedThemes || selectedThemes.size === 0;
+      const allBtnStyle = isAllMode
+        ? 'background:rgba(56,189,248,0.25); border:1px solid #38bdf8; color:#38bdf8; font-weight:800;'
+        : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#94a3b8; font-weight:700;';
+
+      const themePillsHtml = availableThemes.map(t => {
+        const isSelected = !isAllMode && selectedThemes.has(t.code);
+        const pillStyle = isSelected
+          ? 'background:rgba(56,189,248,0.22); border:1px solid #38bdf8; color:#ffffff; font-weight:800;'
+          : 'background:#090d16; border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; font-weight:600;';
+        return `
+          <button type="button" class="wiz-theme-pill-btn ${isSelected ? 'active' : ''}" data-theme-code="${escapeHtml(t.code)}" style="height:28px; padding:0 10px; border-radius:4px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; transition:all 0.12s ease; ${pillStyle}" title="Toggle Theme ${escapeHtml(t.displayCode)} — ${escapeHtml(t.name)}">
+            <span style="color:${isSelected ? '#38bdf8' : '#94a3b8'}; font-weight:800;">${escapeHtml(t.displayCode)}</span>
+            <span>— ${escapeHtml(t.name)}</span>
+          </button>
+        `;
+      }).join('');
+
+      const hintText = availableThemes.length === 0
+        ? 'No themes found in Vocabulary Vault'
+        : (isAllMode
+            ? `Applying to all ${availableThemes.length} theme(s)`
+            : `Applying to ${selectedThemes.size} of ${availableThemes.length} theme(s) only`);
+      const hintColor = (!isAllMode && availableThemes.length > 0) ? '#fbbf24' : '#94a3b8';
+
+      return `
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; border-top:1px solid rgba(56,189,248,0.15); padding-top:8px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1;">
+            <span style="color:#38bdf8;">${getSvgIcon('layers', 15)}</span>
+            <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap;">APPLY TO THEMES:</span>
+            <div id="wiz-theme-pills-wrap" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <button type="button" id="wiz-theme-all-btn" class="wiz-theme-all-btn ${isAllMode ? 'active' : ''}" style="height:28px; padding:0 10px; border-radius:4px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; transition:all 0.12s ease; ${allBtnStyle}">
+                ALL THEMES
+              </button>
+              ${themePillsHtml}
+            </div>
+          </div>
+          <span id="wiz-theme-selection-hint" style="font-size:12px; font-weight:700; color:${hintColor}; white-space:nowrap;">${escapeHtml(hintText)}</span>
+        </div>
+      `;
+    };
 
     const buildWizardPanelsHtml = (activeClass) => {
       const s = activeClass.settings || {};
@@ -628,6 +746,9 @@ export async function openVocabularySystemModal(options = {}) {
               </button>
             </div>
           </div>
+          <div id="wiz-theme-selector-container">
+            ${buildThemeSelectorRowHtml(activeClass)}
+          </div>
         </div>
 
         <!-- Two-Pillar Configuration Grid -->
@@ -651,14 +772,14 @@ export async function openVocabularySystemModal(options = {}) {
                   <input type="number" id="wiz-task-reps" value="${taskReps}" min="1" max="7" style="width:40px; border:none; background:transparent; color:#ffffff; font-size:13px; font-weight:800; text-align:center; padding:0;" />
                   <span style="font-size:12px; font-weight:700; color:#95ff00;">reps</span>
                 </div>
-                <div style="display:flex; gap:4px; margin-top:10px; flex-wrap:wrap;">
-                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 1 ? 'active' : ''}" data-target="wiz-task-reps" data-val="1">1x</button>
-                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 2 ? 'active' : ''}" data-target="wiz-task-reps" data-val="2">2x</button>
-                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 3 ? 'active' : ''}" data-target="wiz-task-reps" data-val="3">3x</button>
-                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 4 ? 'active' : ''}" data-target="wiz-task-reps" data-val="4">4x</button>
-                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 5 ? 'active' : ''}" data-target="wiz-task-reps" data-val="5">5x</button>
-                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 6 ? 'active' : ''}" data-target="wiz-task-reps" data-val="6">6x</button>
-                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 7 ? 'active' : ''}" data-target="wiz-task-reps" data-val="7">7x</button>
+                <div style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:4px; margin-top:10px;">
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 1 ? 'active' : ''}" data-target="wiz-task-reps" data-val="1" style="padding:0 !important; min-width:0;">1x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 2 ? 'active' : ''}" data-target="wiz-task-reps" data-val="2" style="padding:0 !important; min-width:0;">2x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 3 ? 'active' : ''}" data-target="wiz-task-reps" data-val="3" style="padding:0 !important; min-width:0;">3x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 4 ? 'active' : ''}" data-target="wiz-task-reps" data-val="4" style="padding:0 !important; min-width:0;">4x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 5 ? 'active' : ''}" data-target="wiz-task-reps" data-val="5" style="padding:0 !important; min-width:0;">5x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 6 ? 'active' : ''}" data-target="wiz-task-reps" data-val="6" style="padding:0 !important; min-width:0;">6x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 7 ? 'active' : ''}" data-target="wiz-task-reps" data-val="7" style="padding:0 !important; min-width:0;">7x</button>
                 </div>
               </div>
 
@@ -715,9 +836,9 @@ export async function openVocabularySystemModal(options = {}) {
                   <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
                     <select id="wiz-words-task-answer" style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
-                      <option value="spoken" ${(s.wordsTaskAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken (15s)</option>
-                      <option value="selection" ${(s.wordsTaskAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition (20s)</option>
-                      <option value="written" ${(s.wordsTaskAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written (30s)</option>
+                      <option value="spoken" ${(s.wordsTaskAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken</option>
+                      <option value="selection" ${(s.wordsTaskAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition</option>
+                      <option value="written" ${(s.wordsTaskAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written</option>
                       <option value="mixed" ${(s.wordsTaskAnswer || 'spoken') === 'mixed' ? 'selected' : ''}>Mixed (Hybrid)</option>
                     </select>
                   </div>
@@ -765,9 +886,9 @@ export async function openVocabularySystemModal(options = {}) {
                   <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
                     <select id="wiz-phrases-task-answer" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
-                      <option value="spoken" ${(s.phrasesTaskAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken (15s)</option>
-                      <option value="selection" ${(s.phrasesTaskAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition (20s)</option>
-                      <option value="written" ${(s.phrasesTaskAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written (30s)</option>
+                      <option value="spoken" ${(s.phrasesTaskAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken</option>
+                      <option value="selection" ${(s.phrasesTaskAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition</option>
+                      <option value="written" ${(s.phrasesTaskAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written</option>
                       <option value="mixed" ${(s.phrasesTaskAnswer || 'spoken') === 'mixed' ? 'selected' : ''}>Mixed (Hybrid)</option>
                     </select>
                   </div>
@@ -865,9 +986,9 @@ export async function openVocabularySystemModal(options = {}) {
                   <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
                     <select id="wiz-words-exam-answer" style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
-                      <option value="spoken" ${(s.wordsExamAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken (15s)</option>
-                      <option value="selection" ${(s.wordsExamAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition (20s)</option>
-                      <option value="written" ${(s.wordsExamAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written (30s)</option>
+                      <option value="spoken" ${(s.wordsExamAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken</option>
+                      <option value="selection" ${(s.wordsExamAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition</option>
+                      <option value="written" ${(s.wordsExamAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written</option>
                       <option value="mixed" ${(s.wordsExamAnswer || 'spoken') === 'mixed' ? 'selected' : ''}>Mixed (Hybrid)</option>
                     </select>
                   </div>
@@ -915,9 +1036,9 @@ export async function openVocabularySystemModal(options = {}) {
                   <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
                     <select id="wiz-phrases-exam-answer" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
-                      <option value="selection" ${(s.phrasesExamAnswer || 'selection') === 'selection' ? 'selected' : ''}>Recognition (20s)</option>
-                      <option value="spoken" ${(s.phrasesExamAnswer || 'selection') === 'spoken' ? 'selected' : ''}>Spoken (15s)</option>
-                      <option value="written" ${(s.phrasesExamAnswer || 'selection') === 'written' ? 'selected' : ''}>Written (30s)</option>
+                      <option value="selection" ${(s.phrasesExamAnswer || 'selection') === 'selection' ? 'selected' : ''}>Recognition</option>
+                      <option value="spoken" ${(s.phrasesExamAnswer || 'selection') === 'spoken' ? 'selected' : ''}>Spoken</option>
+                      <option value="written" ${(s.phrasesExamAnswer || 'selection') === 'written' ? 'selected' : ''}>Written</option>
                       <option value="mixed" ${(s.phrasesExamAnswer || 'selection') === 'mixed' ? 'selected' : ''}>Mixed (Hybrid)</option>
                     </select>
                   </div>
@@ -1123,25 +1244,25 @@ export async function openVocabularySystemModal(options = {}) {
       const wordsTaskCustom = overlay.querySelector('#wiz-words-task-custom')?.checked ?? false;
       const wordsTaskQ = wordsTaskCustom ? (getVal('#wiz-words-task-questions', '10') || '10') : 'ALL';
       const wordsTaskPace = getInt('#wiz-words-task-pace', 15);
-      const wordsTaskCount = wordsTaskCustom ? (parseInt(wordsTaskQ, 10) || 10) : 20;
+      const wordsTaskCount = wordsTaskCustom ? (parseInt(wordsTaskQ, 10) || 10) : (matchedClass?.vaultWordsPerTask || 20);
       const wordsTaskDur = Math.max(1, Math.ceil(wordsTaskCount * wordsTaskPace / 60));
 
       const phrasesTaskCustom = overlay.querySelector('#wiz-phrases-task-custom')?.checked ?? false;
       const phrasesTaskQ = phrasesTaskCustom ? (getVal('#wiz-phrases-task-questions', '10') || '10') : 'ALL';
       const phrasesTaskPace = getInt('#wiz-phrases-task-pace', 20);
-      const phrasesTaskCount = phrasesTaskCustom ? (parseInt(phrasesTaskQ, 10) || 10) : 10;
+      const phrasesTaskCount = phrasesTaskCustom ? (parseInt(phrasesTaskQ, 10) || 10) : (matchedClass?.vaultPhrasesPerTask || 10);
       const phrasesTaskDur = Math.max(1, Math.ceil(phrasesTaskCount * phrasesTaskPace / 60));
 
       const wordsExamCustom = overlay.querySelector('#wiz-words-exam-custom')?.checked ?? false;
       const wordsExamQ = wordsExamCustom ? (getVal('#wiz-words-exam-questions', matchedClass.hasPhrases ? '30' : '20') || (matchedClass.hasPhrases ? '30' : '20')) : 'ALL';
       const wordsExamPace = getInt('#wiz-words-exam-pace', 15);
-      const wordsExamCount = wordsExamCustom ? (parseInt(wordsExamQ, 10) || 30) : (matchedClass.hasPhrases ? 30 : 20);
+      const wordsExamCount = wordsExamCustom ? (parseInt(wordsExamQ, 10) || 30) : (matchedClass?.vaultWordsPerExam || (matchedClass.hasPhrases ? 30 : 20));
       const wordsExamDur = Math.max(1, Math.ceil(wordsExamCount * wordsExamPace / 60));
 
       const phrasesExamCustom = overlay.querySelector('#wiz-phrases-exam-custom')?.checked ?? false;
       const phrasesExamQ = phrasesExamCustom ? (getVal('#wiz-phrases-exam-questions', '10') || '10') : 'ALL';
       const phrasesExamPace = getInt('#wiz-phrases-exam-pace', 20);
-      const phrasesExamCount = phrasesExamCustom ? (parseInt(phrasesExamQ, 10) || 10) : 10;
+      const phrasesExamCount = phrasesExamCustom ? (parseInt(phrasesExamQ, 10) || 10) : (matchedClass?.vaultPhrasesPerExam || 10);
       const phrasesExamDur = Math.max(1, Math.ceil(phrasesExamCount * phrasesExamPace / 60));
 
       return {
@@ -1213,9 +1334,45 @@ export async function openVocabularySystemModal(options = {}) {
           const found = vocabClasses.find(c => String(c.id) === String(cid));
           if (found) {
             matchedClass = found;
+            selectedThemes = null;
             reRenderWizardBody();
           }
         };
+      });
+    };
+
+    const wireThemeSelector = () => {
+      const themeContainer = overlay.querySelector('#wiz-theme-selector-container');
+      if (!themeContainer) return;
+      const availableThemes = getAvailableThemesForScope(matchedClass);
+
+      const refreshThemeRow = () => {
+        themeContainer.innerHTML = buildThemeSelectorRowHtml(matchedClass);
+        wireThemeSelector();
+      };
+
+      themeContainer.querySelector('#wiz-theme-all-btn')?.addEventListener('click', () => {
+        selectedThemes = null;
+        refreshThemeRow();
+      });
+
+      themeContainer.querySelectorAll('.wiz-theme-pill-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const code = String(btn.dataset.themeCode || '').trim().toUpperCase();
+          if (!code) return;
+          if (!selectedThemes) {
+            selectedThemes = new Set([code]);
+          } else if (selectedThemes.has(code)) {
+            selectedThemes.delete(code);
+            if (selectedThemes.size === 0) selectedThemes = null;
+          } else {
+            selectedThemes.add(code);
+            if (availableThemes.length > 0 && selectedThemes.size >= availableThemes.length) {
+              selectedThemes = null;
+            }
+          }
+          refreshThemeRow();
+        });
       });
     };
 
@@ -1227,6 +1384,7 @@ export async function openVocabularySystemModal(options = {}) {
           const found = vocabClasses.find(c => String(c.id) === String(classSelect.value));
           if (found) {
             matchedClass = found;
+            selectedThemes = null;
             reRenderWizardBody();
           }
         };
@@ -1236,6 +1394,7 @@ export async function openVocabularySystemModal(options = {}) {
       overlay.querySelectorAll('.wiz-scope-btn').forEach(btn => {
         btn.onclick = () => {
           currentScope = btn.dataset.scope || 'this';
+          selectedThemes = null;
           overlay.querySelectorAll('.wiz-scope-btn').forEach(b => {
             const isActive = b.dataset.scope === currentScope;
             b.classList.toggle('active', isActive);
@@ -1243,9 +1402,16 @@ export async function openVocabularySystemModal(options = {}) {
             b.style.color = isActive ? '#38bdf8' : '#94a3b8';
             b.style.fontWeight = isActive ? '800' : '700';
           });
+          const themeContainer = overlay.querySelector('#wiz-theme-selector-container');
+          if (themeContainer) {
+            themeContainer.innerHTML = buildThemeSelectorRowHtml(matchedClass);
+            wireThemeSelector();
+          }
           syncWizardValuesToSettings();
         };
       });
+
+      wireThemeSelector();
 
       // 3. Question Order Segmented Toggles
       overlay.querySelectorAll('.wiz-order-task-btn').forEach(btn => {
@@ -1360,6 +1526,30 @@ export async function openVocabularySystemModal(options = {}) {
         el.addEventListener('change', syncWizardValuesToSettings);
       });
 
+      // Suggest default pace when Answer Mode changes (still freely editable in Pace / Question)
+      const ANSWER_PACE_PAIRS = [
+        ['#wiz-words-task-answer', 'wiz-words-task-pace'],
+        ['#wiz-phrases-task-answer', 'wiz-phrases-task-pace'],
+        ['#wiz-words-exam-answer', 'wiz-words-exam-pace'],
+        ['#wiz-phrases-exam-answer', 'wiz-phrases-exam-pace']
+      ];
+      const DEFAULT_PACE_BY_MODE = { spoken: 15, selection: 20, written: 30, mixed: 20 };
+      ANSWER_PACE_PAIRS.forEach(([ansSel, paceId]) => {
+        const ansEl = overlay.querySelector(ansSel);
+        if (!ansEl) return;
+        ansEl.addEventListener('change', () => {
+          const suggested = DEFAULT_PACE_BY_MODE[ansEl.value] ?? 15;
+          const paceInp = overlay.querySelector('#' + paceId);
+          if (paceInp && !paceInp.disabled) {
+            paceInp.value = String(suggested);
+            overlay.querySelectorAll(`[data-target="${paceId}"]`).forEach(p => {
+              p.classList.toggle('active', parseInt(p.dataset.val, 10) === suggested);
+            });
+            syncWizardValuesToSettings();
+          }
+        });
+      });
+
       // 7. Preview Table Filter & Collapse Controls
       const btnFilterActive = overlay.querySelector('#wiz-btn-filter-active');
       const btnFilterAll = overlay.querySelector('#wiz-btn-filter-all');
@@ -1423,6 +1613,7 @@ export async function openVocabularySystemModal(options = {}) {
     overlay.querySelector('#modal-btn-update-only').onclick = async () => {
       const isApplyAll = currentScope === 'all';
       const targetIds = isApplyAll ? vocabClasses.map(c => c.id).filter(Boolean) : [matchedClass.id];
+      const selectedThemeCodes = (selectedThemes && selectedThemes.size > 0) ? Array.from(selectedThemes) : null;
 
       const btn = overlay.querySelector('#modal-btn-update-only');
       btn.disabled = true;
@@ -1432,15 +1623,20 @@ export async function openVocabularySystemModal(options = {}) {
         let updatedCount = 0;
         const vals = readWizardFormValues();
         for (const cid of targetIds) {
-          await saveClassTestSettings(cid, vals, true);
+          if (!selectedThemeCodes) {
+            await saveClassTestSettings(cid, vals, true);
+          }
           await updateClassTestsConfig({
             classId: cid,
+            themeCodes: selectedThemeCodes,
             taskRepetitions: vals.taskRepetitions,
             taskPassingScore: vals.taskMinScore,
             testPassingScore: vals.examMinScore,
-            taskDurationMinutes: vals.wordsTaskDur,
-            wordsTaskDurationMinutes: vals.wordsTaskDur,
-            phrasesTaskDurationMinutes: vals.phrasesTaskDur,
+            taskDurationMinutes: vals.wordsTaskQuestionsCustom ? vals.wordsTaskDur : null,
+            wordsTaskDurationMinutes: vals.wordsTaskQuestionsCustom ? vals.wordsTaskDur : null,
+            phrasesTaskDurationMinutes: vals.phrasesTaskQuestionsCustom ? vals.phrasesTaskDur : null,
+            wordsExamDurationMinutes: vals.wordsExamQuestionsCustom ? vals.wordsExamDur : null,
+            phrasesExamDurationMinutes: vals.phrasesExamQuestionsCustom ? vals.phrasesExamDur : null,
             wordsTaskPaceSeconds: vals.wordsTaskPace,
             phrasesTaskPaceSeconds: vals.phrasesTaskPace,
             wordsExamPaceSeconds: vals.wordsExamPace,
@@ -1455,7 +1651,8 @@ export async function openVocabularySystemModal(options = {}) {
           updatedCount++;
         }
 
-        showToast(`Settings updated successfully for ${updatedCount} Vocabulary class(es)!`, 'success');
+        const themeNote = selectedThemeCodes ? ` (Theme: ${selectedThemeCodes.join(', ')})` : '';
+        showToast(`Settings updated successfully for ${updatedCount} Vocabulary class(es)${themeNote}!`, 'success');
         overlay.remove();
         if (onComplete) onComplete({ success: true, count: updatedCount });
       } catch (err) {
@@ -1470,6 +1667,7 @@ export async function openVocabularySystemModal(options = {}) {
     overlay.querySelector('#modal-btn-generate-sync').onclick = async () => {
       const isApplyAll = currentScope === 'all';
       const targetClasses = isApplyAll ? vocabClasses : [matchedClass];
+      const selectedThemeCodes = (selectedThemes && selectedThemes.size > 0) ? Array.from(selectedThemes) : null;
 
       const btn = overlay.querySelector('#modal-btn-generate-sync');
       btn.disabled = true;
@@ -1482,16 +1680,21 @@ export async function openVocabularySystemModal(options = {}) {
 
         for (const tc of targetClasses) {
           if (!tc.id) continue;
-          await saveClassTestSettings(tc.id, vals, true);
+          if (!selectedThemeCodes) {
+            await saveClassTestSettings(tc.id, vals, true);
+          }
 
           const res = await autoGenerateTestsHierarchy([tc.levelNumber], {
             programId: tc.programId,
             institutionId: tc.institutionId,
             explicitClassId: tc.id,
+            themeCodes: selectedThemeCodes,
             category: tc.hasPhrases ? 'all' : 'words',
-            taskDurationMinutes: vals.wordsTaskDur,
-            wordsTaskDurationMinutes: vals.wordsTaskDur,
-            phrasesTaskDurationMinutes: vals.phrasesTaskDur,
+            taskDurationMinutes: vals.wordsTaskQuestionsCustom ? vals.wordsTaskDur : null,
+            wordsTaskDurationMinutes: vals.wordsTaskQuestionsCustom ? vals.wordsTaskDur : null,
+            phrasesTaskDurationMinutes: vals.phrasesTaskQuestionsCustom ? vals.phrasesTaskDur : null,
+            wordsExamDurationMinutes: vals.wordsExamQuestionsCustom ? vals.wordsExamDur : null,
+            phrasesExamDurationMinutes: vals.phrasesExamQuestionsCustom ? vals.phrasesExamDur : null,
             wordsTaskPaceSeconds: vals.wordsTaskPace,
             phrasesTaskPaceSeconds: vals.phrasesTaskPace,
             wordsExamPaceSeconds: vals.wordsExamPace,
@@ -1510,7 +1713,8 @@ export async function openVocabularySystemModal(options = {}) {
         }
 
         if (typeof clearAdminCache === 'function') clearAdminCache('tests');
-        showToast(`Auto-Gen Success: ${totalTasks} Tasks, ${totalExams} Exams synchronized!`, 'success');
+        const themeNote = selectedThemeCodes ? ` (Themes: ${selectedThemeCodes.join(', ')})` : '';
+        showToast(`Auto-Gen Success${themeNote}: ${totalTasks} Tasks, ${totalExams} Exams synchronized!`, 'success');
         overlay.remove();
         if (onComplete) onComplete({ success: true, tasks: totalTasks, exams: totalExams });
       } catch (err) {

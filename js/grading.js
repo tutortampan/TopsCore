@@ -2759,6 +2759,58 @@ export function resolveTestCapabilities(testObj = null, classObj = null, classSe
   };
 }
 
+/**
+ * Single Source of Truth (SSOT) for decomposing a Unified Exam attempt into Words (160) & Phrases (40)
+ * when legacy/combined attempts store total_questions > 160 (e.g., 200Q), vs section-isolated attempts (<= 160Q).
+ * Prevents discrepancies between Next Assignment Hero, TESTS tab, Leaderboard, and Class Hub.
+ *
+ * @param {Object} attempt Attempt row from DB
+ * @param {Object} [opts]
+ * @param {boolean} [opts.isRemedialOverride=false] Additional remedial flag (e.g. from test-level remedial map)
+ * @param {string} [opts.sectionHint] Optional pre-classified section ('words' | 'phrases')
+ * @returns {{ wordsPct: number|null, phrasesPct: number|null, wordsPts: number|null, phrasesPts: number|null, isFull200Q: boolean }}
+ */
+export function resolveUnifiedExamAttemptBreakdown(attempt, opts = {}) {
+  if (!attempt) return { wordsPct: null, phrasesPct: null, wordsPts: null, phrasesPts: null, isFull200Q: false };
+  const isRem = Boolean(attempt.is_remedial_unlocked || attempt.is_remedial || opts.isRemedialOverride);
+  const isForgiven = Boolean(attempt.is_forgiven);
+  const tQ = Number(attempt.total_questions || 0);
+  const fr = String(attempt.forgiven_reason || '');
+
+  if (tQ > 160) {
+    const rawScore = Number(attempt.score ?? attempt.correct_count ?? 0);
+    const wSc = Math.min(160, Math.round(rawScore));
+    const rawWPct = (wSc / 160) * 100;
+    const wordsPct = isRem ? Math.min(rawWPct, 60.0) : rawWPct;
+
+    let phrasesPct = null;
+    let phrasesPts = null;
+    if (rawScore > 160 || isForgiven) {
+      phrasesPts = Math.min(40, Math.round(Math.max(0, rawScore - 160)));
+      const rawPPct = isForgiven && rawScore <= 160 ? 60.0 : (phrasesPts / 40) * 100;
+      phrasesPct = isRem ? Math.min(rawPPct, 60.0) : rawPPct;
+    }
+
+    return { wordsPct, phrasesPct, wordsPts: wSc, phrasesPts, isFull200Q: true };
+  }
+
+  const rawPct = parseFloat(attempt.effective_score != null ? attempt.effective_score : (attempt.percentage || 0));
+  const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+  const sec = opts.sectionHint || (
+    fr.includes('[SECTION: PHRASES]') || (!fr.includes('[SECTION: WORDS]') && tQ > 0 && tQ <= 40)
+      ? 'phrases'
+      : 'words'
+  );
+
+  if (sec === 'phrases') {
+    const pPts = tQ === 40 ? Math.round(Number(attempt.score ?? 0)) : Math.round(40 * (effPct / 100));
+    return { wordsPct: null, phrasesPct: effPct, wordsPts: null, phrasesPts: pPts, isFull200Q: false };
+  }
+
+  const wPts = tQ === 160 ? Math.round(Number(attempt.score ?? 0)) : Math.round(160 * (effPct / 100));
+  return { wordsPct: effPct, phrasesPct: null, wordsPts: wPts, phrasesPts: null, isFull200Q: false };
+}
+
 // ── EXAM RULES & FINAL ASSESSMENT SSOT ENGINE ──
 export {
   EXAM_RULES_SCHEMA,
