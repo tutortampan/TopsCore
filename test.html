@@ -66,35 +66,27 @@
     </div>
   </aside>
 
-  <!-- 1. Top Header: FULL TEST NAME (2 Baris: Test Title + Tema/Topic di baris kedua) — 50px -->
+  <!-- 3-Panel Header: Left (Photo + Student Name) | Right Top (Exam Name) + 10px + Right Bottom (Remaining Time) -->
   <header class="test-top-header" id="test-top-header">
-    <div class="test-title-inner">
-      <h1 id="test-main-title" class="test-main-title" title="Test Title">TEST TITLE</h1>
-      <p id="test-title-sub" class="test-title-sub">THEME / TOPIC</p>
-    </div>
-  </header>
-
-  <!-- 2. Controls & Student Strip (50px): Give Up | Student Photo | Dynamic Timer -->
-  <div class="test-controls-bar" id="test-controls-bar">
-    <!-- Left: Give up button (Red background, clean bold text) -->
-    <div class="test-giveup-wrap">
-      <button id="giveup-btn" class="btn-giveup" onclick="window.openSubmitModal()" title="Give up / End Test">
-        <span>Give up!</span>
-      </button>
-    </div>
-
-    <!-- Center: Student Avatar Photo (50px Banner Uniform with Grade Aura) -->
-    <div class="test-avatar-wrap">
+    <div class="test-panel-student">
       <img id="test-student-avatar" class="test-student-avatar" src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20240%20320%22%20width%3D%22240%22%20height%3D%22320%22%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22avatarGrad_S%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%236366f1%22%20%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234338ca%22%20%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%20%20%3Crect%20width%3D%22240%22%20height%3D%22320%22%20rx%3D%2216%22%20fill%3D%22url(%23avatarGrad_S)%22%20%2F%3E%0A%20%20%3Ccircle%20cx%3D%22120%22%20cy%3D%22120%22%20r%3D%2250%22%20fill%3D%22rgba(255%2C255%2C255%2C0.2)%22%20%2F%3E%0A%20%20%3Cpath%20d%3D%22M%2036%20288%20C%2036%20210%2C%20204%20210%2C%20204%20288%20Z%22%20fill%3D%22rgba(255%2C255%2C255%2C0.2)%22%20%2F%3E%0A%20%20%3Ctext%20x%3D%22120%22%20y%3D%22138%22%20font-family%3D%22'Inter'%2C%20sans-serif%22%20font-size%3D%2240%22%20font-weight%3D%22800%22%20fill%3D%22%23ffffff%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3ES%3C%2Ftext%3E%0A%3C%2Fsvg%3E" alt="Student" />
     </div>
-
-    <!-- Right: Countdown Timer Badge (Dynamic Background Color green -> red) -->
-    <div class="test-timer-wrap">
-      <div class="test-timer shrink-0" id="test-timer">
-        <span id="timer-display" class="timer-display">18:02</span>
+    <div class="test-header-right">
+      <div class="test-panel-title">
+        <h1 id="test-main-title" class="test-main-title" title="Test Title">TEST TITLE</h1>
+        <p id="test-title-sub" class="test-title-sub">THEME / TOPIC</p>
+      </div>
+      <div class="test-header-bottom-row">
+        <div id="test-sync-indicator" class="test-panel-sync sync-status-badge">
+          <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--clr-success);display:inline-block;flex-shrink:0;"></span>
+          <span id="sync-status-text">Saved</span>
+        </div>
+        <div class="test-timer shrink-0" id="test-timer">
+          <span id="timer-display" class="timer-display">00:50:00:00</span>
+        </div>
       </div>
     </div>
-  </div>
+  </header>
 
   <!-- TEST body -->
   <div class="test-body">
@@ -146,10 +138,6 @@
 
   <!-- Permanent Bottom Banner: Exactly 50px Height Locked Base Footer per Invariant SSOT §1.8 -->
   <footer id="bottom-ad-banner" class="topscore-locked-banner">
-    <div id="test-sync-indicator" class="sync-status-badge" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--clr-text-2,#94a3b8);">
-      <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--clr-success);display:inline-block;"></span>
-      <span id="sync-status-text">Saved</span>
-    </div>
     <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
   </footer>
 
@@ -388,7 +376,7 @@
         <!-- 3. CTA Area / Modal Footer (60px Panel + 1.5px Perimeter Divider per Invariant 1.5.2 & 1.5.4) -->
         <div class="hazard-modal-footer modal-footer">
           <button type="button" class="btn hazard-btn-giveup" id="danger-submit-btn">
-            GIVE UP!
+            SUBMIT ANYWAY
           </button>
           <button type="button" class="btn hazard-btn-back-neon" id="cancel-submit-btn">
             BACK TO TEST

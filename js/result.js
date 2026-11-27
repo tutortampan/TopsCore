@@ -328,12 +328,13 @@ setTimeout(purgeExternalBadges, 2000);
         return;
       }
 
-      // Exclude Bonus Round items from Result Breakdown (they are ungraded surprise items)
+      // Exclude Warm-Up & Bonus Round items from Result Breakdown (they are ungraded items)
       answers = answers.filter(a => {
         const snap = typeof a?.question_snapshot === 'string'
           ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
           : (a?.question_snapshot || {});
-        return !(snap?.is_bonus_round || snap?.dynamic_type === 'bonus_round' || a?.is_bonus_round);
+        const dyn = String(snap?.dynamic_type || '').toLowerCase();
+        return !(snap?.is_bonus_round || a?.is_bonus_round || ['bonus_round', 'live_time', 'live_day', 'live_date'].includes(dyn));
       });
 
       window._allAttemptAnswers = answers;

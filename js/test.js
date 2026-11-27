@@ -2118,7 +2118,16 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         totalSeconds: totalDurationSeconds,
         onTick(remaining) {
           if (!window._perQuestionInterval && !document.getElementById('tc-phase-splash-overlay')) {
-            display.textContent = formatTime(remaining);
+            display.textContent = formatHhMmSsMs(remaining * 1000);
+            const pct = totalDurationSeconds > 0 ? (remaining / totalDurationSeconds) : 1;
+            timerEl.classList.remove('timer-green', 'timer-yellow', 'timer-red', 'warning', 'critical');
+            if (pct <= 0.20) {
+              timerEl.classList.add('timer-red');
+            } else if (pct <= 0.50) {
+              timerEl.classList.add('timer-yellow');
+            } else {
+              timerEl.classList.add('timer-green');
+            }
           }
           if (remaining <= graceThreshold) {
             updateGracePeriodBanner(remaining);
@@ -2237,6 +2246,10 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           btn.textContent = globalIdx + 1;
           btn.setAttribute('aria-label', `Question ${globalIdx + 1}`);
           btn.addEventListener('click', () => {
+            const isPhased = Number(testData?.payload?.per_question_seconds || 0) > 0;
+            if (isPhased && answerRows[currentIndex] && getRowPhaseKey(row) !== getRowPhaseKey(answerRows[currentIndex])) {
+              return;
+            }
             saveCurrentAnswer();
             renderQuestion(globalIdx);
             if (typeof window.toggleMatrixPopup === 'function') {
@@ -2339,8 +2352,14 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
     let _navProgressTimer = null;
     function updateProgressMetrics() {
       const activeMap = window.answeredMap || answeredMap;
-      const answered = Object.values(activeMap).filter(hasAnswer).length;
-      const pct = allAnswerRows.length > 0 ? (answered / allAnswerRows.length) * 100 : 0;
+      const isPhased = Number(testData?.payload?.per_question_seconds || 0) > 0;
+      const activePhase = isPhased && answerRows[currentIndex] ? getRowPhaseKey(answerRows[currentIndex]) : null;
+      const scopedRows = activePhase ? answerRows.filter(r => getRowPhaseKey(r) === activePhase) : allAnswerRows;
+      const answered = activePhase
+        ? scopedRows.filter(r => hasAnswer(activeMap[r.id])).length
+        : Object.values(activeMap).filter(hasAnswer).length;
+      const total = scopedRows.length;
+      const pct = total > 0 ? (answered / total) * 100 : 0;
       const fillEl = document.getElementById('test-progress-fill');
       if (fillEl) fillEl.style.width = pct + '%';
       const progressTextEl = document.getElementById('progress-text-percent');
@@ -2348,18 +2367,43 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       const counterEl = document.getElementById('question-counter');
       const counterTextEl = document.getElementById('question-counter-text');
       if (counterTextEl) {
-        counterTextEl.textContent = `${answered}/${allAnswerRows.length} Answered`;
+        counterTextEl.textContent = `${answered}/${total} Answered`;
       } else if (counterEl) {
-        counterEl.textContent = `${answered}/${allAnswerRows.length} answered`;
+        counterEl.textContent = `${answered}/${total} answered`;
       }
       if (counterEl) {
-        counterEl.classList.toggle('is-complete', allAnswerRows.length > 0 && answered >= allAnswerRows.length);
+        counterEl.classList.toggle('is-complete', total > 0 && answered >= total);
+      }
+    }
+
+    function syncPhasedNavButtons() {
+      const perQSec = Number(testData?.payload?.per_question_seconds || 0);
+      if (perQSec <= 0 || !answerRows[currentIndex]) return;
+      const activeMap = window.answeredMap || answeredMap;
+      const row = answerRows[currentIndex];
+      const activePhase = getRowPhaseKey(row);
+      const firstInPhase = answerRows.findIndex(r => getRowPhaseKey(r) === activePhase);
+      const isCurrentAnswered = hasAnswer(activeMap[row.id]);
+      const bottomPrev = document.getElementById('bottom-prev-btn');
+      const bottomNext = document.getElementById('bottom-next-btn');
+      const counterEl = document.getElementById('question-counter');
+      if (bottomPrev) {
+        bottomPrev.disabled = (currentIndex <= firstInPhase) || !isCurrentAnswered;
+      }
+      if (bottomNext) {
+        bottomNext.disabled = !isCurrentAnswered;
+      }
+      if (counterEl) {
+        counterEl.style.pointerEvents = isCurrentAnswered ? 'auto' : 'none';
+        counterEl.style.opacity = isCurrentAnswered ? '1' : '0.45';
+        counterEl.setAttribute('aria-disabled', isCurrentAnswered ? 'false' : 'true');
       }
     }
 
     function updateActiveChipOnly(rowId, val) {
       const activeMap = window.answeredMap || answeredMap;
       activeMap[rowId] = val;
+      syncPhasedNavButtons();
       const btn = document.getElementById(`qnav-row-${rowId}`) || document.getElementById(`qnav-${currentIndex}`);
       if (btn) {
         btn.classList.toggle('answered', hasAnswer(val));
@@ -2573,41 +2617,64 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
     }
     window.syncLiveSessionModality = syncLiveSessionModality;
 
-    // —— 3-Phase Timed Flow & Splash Helpers (Warm-up 60s/Q -> Core 20s/Q -> Bonus 60s/Q) ——
+    // —— 3-Phase Cumulative Session Timer & Splash Helpers (Warm-up 3m -> Core 50m -> Bonus 2m) ——
     window._seenPhaseSplashes = window._seenPhaseSplashes || new Set();
+    window._phaseRemainingMs = window._phaseRemainingMs || {};
+    function formatHhMmSsMs(totalMs) {
+      const safeMs = Math.max(0, Math.floor(totalMs));
+      const totalSec = Math.floor(safeMs / 1000);
+      const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+      const ss = String(totalSec % 60).padStart(2, '0');
+      const cs = String(Math.floor((safeMs % 1000) / 10)).padStart(2, '0');
+      return `${hh}:${mm}:${ss}:${cs}`;
+    }
     function clearPerQuestionTimer() {
       if (window._perQuestionInterval) {
         clearInterval(window._perQuestionInterval);
         window._perQuestionInterval = null;
       }
     }
-    function startPerQuestionTimer(seconds, onExpire) {
+    function startCumulativePhaseTimer(phaseKey, totalSeconds, onExpire) {
+      if (window._activePhaseKey === phaseKey && window._perQuestionInterval) {
+        return;
+      }
       clearPerQuestionTimer();
+      window._activePhaseKey = phaseKey;
+      const totalMs = Math.max(1000, Number(totalSeconds || 60) * 1000);
+      if (typeof window._phaseRemainingMs[phaseKey] !== 'number') {
+        window._phaseRemainingMs[phaseKey] = totalMs;
+      }
+      const endAt = Date.now() + window._phaseRemainingMs[phaseKey];
       const timerEl = document.getElementById('timer-display');
-      let rem = Math.max(1, Number(seconds || 20));
+      const timerBox = document.getElementById('test-timer');
       const paint = () => {
         if (!timerEl) return;
-        const mm = String(Math.floor(rem / 60)).padStart(2, '0');
-        const ss = String(rem % 60).padStart(2, '0');
-        timerEl.textContent = `${mm}:${ss}`;
-        if (rem <= 5) {
-          timerEl.style.color = '#ff4d4d';
-        } else if (rem <= 10) {
-          timerEl.style.color = '#fbbf24';
-        } else {
-          timerEl.style.color = '';
+        const remMs = Math.max(0, window._phaseRemainingMs[phaseKey]);
+        timerEl.textContent = formatHhMmSsMs(remMs);
+        timerEl.style.color = '';
+        if (timerBox) {
+          const pct = totalMs > 0 ? (remMs / totalMs) : 1;
+          timerBox.classList.remove('timer-green', 'timer-yellow', 'timer-red', 'warning', 'critical');
+          if (pct <= 0.20) {
+            timerBox.classList.add('timer-red');
+          } else if (pct <= 0.50) {
+            timerBox.classList.add('timer-yellow');
+          } else {
+            timerBox.classList.add('timer-green');
+          }
         }
       };
       paint();
       window._perQuestionInterval = setInterval(() => {
         if (!isTestActive) { clearPerQuestionTimer(); return; }
-        rem--;
+        window._phaseRemainingMs[phaseKey] = Math.max(0, endAt - Date.now());
         paint();
-        if (rem <= 0) {
+        if (window._phaseRemainingMs[phaseKey] <= 0) {
           clearPerQuestionTimer();
           if (typeof onExpire === 'function') onExpire();
         }
-      }, 1000);
+      }, 50);
     }
     function showPhaseSplash(phaseKey, headline, subtitle, btnLabel, accentColor, onStart) {
       if (window._seenPhaseSplashes.has(phaseKey)) {
@@ -2635,8 +2702,22 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       };
     }
 
-    // —— Phase Gating Helper (3 Live Dynamic -> 100 Shuffled Topic -> 2 Bonus Round) ——
+    // —— Phase Gating Helper (3 Live Warm-Up -> 100 Shuffled Topic -> 2 Bonus Round) ——
+    function isWarmupAnswerCorrect(row, rawAns) {
+      const ans = String(rawAns || '').trim().toLowerCase();
+      if (!ans) return false;
+      const snap = typeof row?.question_snapshot === 'string'
+        ? (() => { try { return JSON.parse(row.question_snapshot); } catch(_) { return {}; } })()
+        : (row?.question_snapshot || {});
+      const acc = snap?.accepted_answers || snap?.accepted_answers_snapshot || row?.accepted_answers_snapshot || row?.accepted_answers;
+      const list = Array.isArray(acc)
+        ? acc
+        : String(acc || snap?.correct_answer || row?.correct_answer_snapshot || row?.correct_answer || '').split(/[;|]/);
+      return list.map(x => String(x || '').trim().toLowerCase()).filter(Boolean).includes(ans);
+    }
+
     function getLiveGateBlockIdx(targetIdx) {
+      if (window._warmupTimerExpired) return -1;
       if (!Array.isArray(answerRows) || answerRows.length === 0) return -1;
       const getDyn = (r) => {
         const s = typeof r?.question_snapshot === 'string' ? (() => { try { return JSON.parse(r.question_snapshot); } catch(_) { return {}; } })() : (r?.question_snapshot || {});
@@ -2650,15 +2731,23 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       const maxLiveIdx = Math.max(...liveIndices);
       if (targetIdx <= maxLiveIdx) return -1;
       const firstUnansweredLive = liveIndices.find(i => !String(answeredMap[answerRows[i].id] || '').trim());
-      return firstUnansweredLive !== undefined ? firstUnansweredLive : -1;
+      if (firstUnansweredLive !== undefined) return { idx: firstUnansweredLive, reason: 'unanswered' };
+      const firstWrongLive = liveIndices.find(i => !isWarmupAnswerCorrect(answerRows[i], answeredMap[answerRows[i].id]));
+      if (firstWrongLive !== undefined) return { idx: firstWrongLive, reason: 'wrong' };
+      return -1;
     }
 
     // —— Render Question ——
     function renderQuestion(idx) {
-      const blockedLiveIdx = getLiveGateBlockIdx(idx);
-      if (blockedLiveIdx !== -1) {
-        showToast('Answer all 3 Live Questions first before starting the 100 Topic Questions.', 'warning');
-        idx = blockedLiveIdx;
+      const blockedLive = getLiveGateBlockIdx(idx);
+      if (blockedLive !== -1) {
+        showToast(
+          blockedLive.reason === 'wrong'
+            ? 'Warm-Up answer is still incorrect! Fix all 3 Warm-Up answers before starting the 100 Core Questions.'
+            : 'Answer all 3 Warm-Up questions first before starting the 100 Core Questions.',
+          'warning'
+        );
+        idx = blockedLive.idx;
       }
       abortActiveSpeechSession();
       cancelMcAutoAdvance();
@@ -2846,10 +2935,18 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       }
 
       const main = document.getElementById('test-main');
+      if (fixedBottomArea && main && main.contains(fixedBottomArea)) {
+        const footerAnchor = document.getElementById('bottom-ad-banner');
+        if (footerAnchor && footerAnchor.parentElement === document.body) {
+          document.body.insertBefore(fixedBottomArea, footerAnchor);
+        } else {
+          document.body.appendChild(fixedBottomArea);
+        }
+      }
       main.innerHTML = '';
       main.className = 'test-main-content notranslate flex-1 flex flex-col items-center min-h-0 w-full mx-auto';
       main.setAttribute('translate', 'no');
-      main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0; box-sizing:border-box; gap:6px;';
+      main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0 0 10px 0; box-sizing:border-box; gap:10px;';
 
       // Preemptive translation check on question change
       const activeTrans = checkTranslationArtifacts();
@@ -3026,6 +3123,11 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         }
       }
 
+      // Place Prev / Counter / Next bar directly ABOVE the answer choices
+      if (fixedBottomArea && answerArea && answerArea.parentElement === main) {
+        main.insertBefore(fixedBottomArea, answerArea);
+      }
+
       const bottomBar = document.querySelector('.bottom-nav-bar');
       if (bottomBar) bottomBar.style.display = 'flex';
 
@@ -3118,57 +3220,73 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         }
       }
       updateNavGrid();
+      syncPhasedNavButtons();
       bindQuestionSwipeNavigation(main);
 
-      // 3-Phase Per-Question Timer & Splash Screens (when per_question_seconds is configured, e.g. 100 Questions Exam)
+      // 3-Phase Cumulative Session Timer & Splash Screens (Warm-Up 3m -> Core 50m -> Bonus 2m)
       const perQSec = Number(testData?.payload?.per_question_seconds || 0);
       if (perQSec > 0) {
-        const dynType = String(snap?.dynamic_type || row?.dynamic_type || '').toLowerCase();
-        const isWarmup = ['live_time', 'live_day', 'live_date'].includes(dynType);
-        const isBonusQ = Boolean(snap?.is_bonus_round || row?.is_bonus_round || dynType === 'bonus_round');
+        const activePhase = getRowPhaseKey(row);
+        const phaseRows = answerRows.filter(r => getRowPhaseKey(r) === activePhase);
         const warmupSec = Number(testData?.payload?.warmup_per_question_seconds || 60);
         const bonusSec = Number(testData?.payload?.bonus_per_question_seconds || 60);
+        const phaseTotalSec = activePhase === 'warmup'
+          ? (warmupSec * phaseRows.length)
+          : (activePhase === 'bonus' ? (bonusSec * phaseRows.length) : (perQSec * phaseRows.length));
 
-        // Lock Prev button during timed phases so per-question timers cannot be bypassed
-        if (bottomPrev) bottomPrev.disabled = true;
+        if (window._activePhaseKey && window._activePhaseKey !== activePhase) {
+          clearPerQuestionTimer();
+        }
+
+        const formatPhaseDuration = (sec) => {
+          const mins = Math.floor(sec / 60);
+          const remSec = sec % 60;
+          if (mins > 0 && remSec === 0) return `${mins} ${mins === 1 ? 'minute' : 'minutes'} total`;
+          if (mins > 0) return `${mins}m ${remSec}s total`;
+          return `${sec} seconds total`;
+        };
 
         const armPhaseTimer = () => {
-          const sec = isWarmup ? warmupSec : (isBonusQ ? bonusSec : perQSec);
-          startPerQuestionTimer(sec, () => {
+          startCumulativePhaseTimer(activePhase, phaseTotalSec, () => {
             cancelMcAutoAdvance();
+            abortActiveSpeechSession();
             saveCurrentAnswer();
-            if (idx < answerRows.length - 1) {
-              renderQuestion(idx + 1);
-            } else {
-              const bNext = document.getElementById('bottom-next-btn');
-              if (bNext) bNext.click();
+            if (activePhase === 'warmup') {
+              window._warmupTimerExpired = true;
+              const nextCoreIdx = answerRows.findIndex(r => getRowPhaseKey(r) === 'core');
+              if (nextCoreIdx !== -1) { renderQuestion(nextCoreIdx); return; }
             }
+            if (activePhase === 'warmup' || activePhase === 'core') {
+              const nextBonusIdx = answerRows.findIndex(r => getRowPhaseKey(r) === 'bonus');
+              if (nextBonusIdx !== -1) { renderQuestion(nextBonusIdx); return; }
+            }
+            handleTimeUp(false);
           });
         };
 
-        if (isWarmup && !window._seenPhaseSplashes.has('warmup')) {
+        if (activePhase === 'warmup' && !window._seenPhaseSplashes.has('warmup')) {
           showPhaseSplash(
             'warmup',
             "LET'S WARM UP!",
-            `<div style="display:flex; flex-direction:column; gap:4px;"><div>3 Opening Questions</div><div>${warmupSec >= 60 ? `${Math.round(warmupSec / 60)} minute` : `${warmupSec} seconds`} per question</div></div>`,
+            `<div style="display:flex; flex-direction:column; gap:4px;"><div>${phaseRows.length} Opening Questions</div><div>${formatPhaseDuration(phaseTotalSec)}</div></div>`,
             'Start Warm Up →',
             '#ff2d87',
             armPhaseTimer
           );
-        } else if (!isWarmup && !isBonusQ && !window._seenPhaseSplashes.has('core')) {
+        } else if (activePhase === 'core' && !window._seenPhaseSplashes.has('core')) {
           showPhaseSplash(
             'core',
             'HERE WE GO!',
-            `<div style="display:flex; flex-direction:column; gap:4px;"><div>100 Questions</div><div>${perQSec} seconds per question • Auto-advance</div></div>`,
+            `<div style="display:flex; flex-direction:column; gap:4px;"><div>${phaseRows.length} Questions</div><div>${formatPhaseDuration(phaseTotalSec)}</div></div>`,
             'Start 100 Questions →',
             '#FF8C00',
             armPhaseTimer
           );
-        } else if (isBonusQ && !window._seenPhaseSplashes.has('bonus')) {
+        } else if (activePhase === 'bonus' && !window._seenPhaseSplashes.has('bonus')) {
           showPhaseSplash(
             'bonus',
             'BONUS ROUNDS!',
-            `<div style="display:flex; flex-direction:column; gap:4px;"><div>2 Bonus Questions (Excluded from Score)</div><div>${bonusSec >= 60 ? `${Math.round(bonusSec / 60)} minute` : `${bonusSec} seconds`} per question</div></div>`,
+            `<div style="display:flex; flex-direction:column; gap:4px;"><div>${phaseRows.length} Bonus Questions (Excluded from Score)</div><div>${formatPhaseDuration(phaseTotalSec)}</div></div>`,
             'Start Bonus Round →',
             '#95ff00',
             armPhaseTimer
@@ -4349,6 +4467,13 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
     });
 
     window.toggleMatrixPopup = function(show) {
+      const perQSec = Number(testData?.payload?.per_question_seconds || 0);
+      if (perQSec > 0 && show !== false && answerRows[currentIndex]) {
+        const activeMap = window.answeredMap || answeredMap;
+        if (!hasAnswer(activeMap[answerRows[currentIndex].id])) {
+          return;
+        }
+      }
       const popup = document.getElementById('matrix-popup');
       if (!popup) return;
       const isCurrentlyShown = popup.style.display === 'flex' || (!popup.classList.contains('hidden') && popup.style.display !== 'none');
@@ -4495,20 +4620,25 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       saveCurrentAnswer();
       const activeMap = window.answeredMap || answeredMap;
 
-      // 1. Check if there is an unanswered question in the current section starting after currentIndex
+      const isPhased = Number(testData?.payload?.per_question_seconds || 0) > 0;
+      const activePhase = isPhased && answerRows[currentIndex] ? getRowPhaseKey(answerRows[currentIndex]) : null;
+
+      // 1. Check if there is an unanswered question in the current section/phase starting after currentIndex
       let targetLocalIdx = -1;
       for (let i = currentIndex + 1; i < answerRows.length; i++) {
         const r = answerRows[i];
+        if (activePhase && getRowPhaseKey(r) !== activePhase) continue;
         if (!hasAnswer(activeMap[r.id])) {
           targetLocalIdx = i;
           break;
         }
       }
 
-      // 2. If not found after currentIndex, wrap around in the current section (from 0 to currentIndex)
+      // 2. If not found after currentIndex, wrap around in the current section/phase (from 0 to currentIndex)
       if (targetLocalIdx === -1) {
         for (let i = 0; i <= currentIndex; i++) {
           const r = answerRows[i];
+          if (activePhase && getRowPhaseKey(r) !== activePhase) continue;
           if (!hasAnswer(activeMap[r.id])) {
             targetLocalIdx = i;
             break;
@@ -4645,7 +4775,8 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       const payload = allAnswerRows
         .filter(row => {
           const s = typeof row?.question_snapshot === 'string' ? (() => { try { return JSON.parse(row.question_snapshot); } catch(_) { return {}; } })() : (row?.question_snapshot || {});
-          return !(s?.is_bonus_round || row?.is_bonus_round || s?.dynamic_type === 'bonus_round');
+          const dyn = String(s?.dynamic_type || row?.dynamic_type || '').toLowerCase();
+          return !(s?.is_bonus_round || row?.is_bonus_round || ['bonus_round', 'live_time', 'live_day', 'live_date'].includes(dyn));
         })
         .map(row => ({
           attempt_answer_id: row.id,

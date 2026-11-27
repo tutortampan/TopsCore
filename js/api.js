@@ -2855,9 +2855,13 @@ export async function startTest(studentId, testId) {
       } else {
         answers = insertedAns || [];
 
-        // Authoritative: Update total_questions on attempt in database and memory (exclude Bonus Round)
+        // Authoritative: Update total_questions on attempt in database and memory (exclude Warm-Up & Bonus Round)
         if (answers.length > 0) {
-          const scoredTotal = answers.filter(a => !(a.question_snapshot?.is_bonus_round || a.question_snapshot?.dynamic_type === 'bonus_round')).length || answers.length;
+          const isUnscoredItem = (snap) => Boolean(
+            snap?.is_bonus_round ||
+            ['bonus_round', 'live_time', 'live_day', 'live_date'].includes(String(snap?.dynamic_type || '').toLowerCase())
+          );
+          const scoredTotal = answers.filter(a => !isUnscoredItem(a.question_snapshot)).length || answers.length;
           await sb.from('attempts').update({
             total_questions: scoredTotal,
             updated_at: new Date().toISOString()
