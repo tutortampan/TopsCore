@@ -422,7 +422,7 @@ function _getPersistentStorage() {
   return null;
 }
 
-const MASTER_STORAGE_PREFIX = 'topscore_mc_v683_';
+const MASTER_STORAGE_PREFIX = 'topscore_mc_v696_';
 const MASTER_STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7-day weekly academic cycle (Ahad to Ahad)
 
 // Purge any stale legacy cache keys from previous versions on module initialization
@@ -4063,7 +4063,7 @@ export async function getServerTimeWita() {
 // VOCABULARY VAULT — CRUD & IMPORT (OFFLINE-FIRST PERSISTENT CACHE)
 // ============================================================
 const VAULT_CACHE_KEY = 'vault_all_master_words';
-const VAULT_STORAGE_KEY = 'topscore_vault_cache_v1';
+const VAULT_STORAGE_KEY = 'topscore_vault_cache_v4';
 const VAULT_STORAGE_TTL_MS = 24 * 60 * 60 * 1000; // 24-hour persistent offline cache
 const VAULT_MEMORY_TTL_MS = 5 * 60 * 1000; // 5-minute in-memory refresh check
 
@@ -4599,29 +4599,51 @@ export async function updateVaultThemeCodeCascade(oldCode, newCode, targetLevel 
 
   // 2. Cascade to theme_program_assignments so assigned classes/programs are not orphaned
   try {
-    let assignQuery = sb.from('theme_program_assignments')
-      .update({ theme_code: cleanNew, updated_at: new Date().toISOString() })
+    let oldAssignQuery = sb.from('theme_program_assignments')
+      .select('id, program_id, target_level')
       .eq('theme_code', cleanOld);
-    if (targetLevel !== null && targetLevel !== undefined) assignQuery = assignQuery.eq('target_level', targetLevel);
-    await assignQuery;
+    if (targetLevel !== null && targetLevel !== undefined) oldAssignQuery = oldAssignQuery.eq('target_level', targetLevel);
+    const { data: oldAssigns } = await oldAssignQuery;
+
+    if (oldAssigns && oldAssigns.length > 0) {
+      const nowIso = new Date().toISOString();
+      for (const a of oldAssigns) {
+        const { error: upErr } = await sb.from('theme_program_assignments')
+          .upsert({
+            theme_code: cleanNew,
+            target_level: a.target_level,
+            program_id: a.program_id,
+            is_active: true,
+            updated_at: nowIso
+          }, { onConflict: 'theme_code,target_level,program_id' });
+        if (!upErr) {
+          await sb.from('theme_program_assignments').delete().eq('id', a.id);
+        }
+      }
+    }
   } catch (err) {
     console.warn('[updateVaultThemeCodeCascade] assign cascade notice:', err);
   }
 
-  // 3. Update any topic_code that was prefixed with oldCode (e.g. A1 -> B1)
+  // 3. Batch-update any topic_code that was prefixed with oldCode (e.g. A1 -> B1, G1 -> EEC1)
   try {
     let topicCodeQuery = sb.from('vocabulary_vault')
-      .select('id, topic_code')
+      .select('topic_code')
       .eq('theme_code', cleanNew)
       .is('deleted_at', null);
     if (targetLevel !== null && targetLevel !== undefined) topicCodeQuery = topicCodeQuery.eq('target_level', targetLevel);
     const { data: tpRows } = await topicCodeQuery;
     if (tpRows && tpRows.length > 0) {
-      for (const row of tpRows) {
-        if (row.topic_code && row.topic_code.startsWith(cleanOld)) {
-          const updatedTpCode = cleanNew + row.topic_code.slice(cleanOld.length);
-          await sb.from('vocabulary_vault').update({ topic_code: updatedTpCode }).eq('id', row.id);
-        }
+      const distinctTpCodes = [...new Set(tpRows.map(r => r.topic_code).filter(tc => tc && tc.startsWith(cleanOld)))];
+      for (const oldTpCode of distinctTpCodes) {
+        const updatedTpCode = cleanNew + oldTpCode.slice(cleanOld.length);
+        let batchUpd = sb.from('vocabulary_vault')
+          .update({ topic_code: updatedTpCode, updated_at: new Date().toISOString() })
+          .eq('theme_code', cleanNew)
+          .eq('topic_code', oldTpCode)
+          .is('deleted_at', null);
+        if (targetLevel !== null && targetLevel !== undefined) batchUpd = batchUpd.eq('target_level', targetLevel);
+        await batchUpd;
       }
     }
   } catch (_) {}
@@ -4646,13 +4668,30 @@ export async function updateVaultThemeLevelCascade(themeCode, oldLevel, newLevel
   const { error } = await query;
   if (error) throw error;
 
-  // 2. Cascade theme_program_assignments
+  // 2. Cascade theme_program_assignments (upsert new + remove old to avoid unique constraint conflicts)
   try {
-    let assignQuery = sb.from('theme_program_assignments')
-      .update({ target_level: parsedNew, updated_at: new Date().toISOString() })
+    let oldAssignQuery = sb.from('theme_program_assignments')
+      .select('id, program_id, target_level')
       .eq('theme_code', cleanCode);
-    if (parsedOld !== null && !isNaN(parsedOld)) assignQuery = assignQuery.eq('target_level', parsedOld);
-    await assignQuery;
+    if (parsedOld !== null && !isNaN(parsedOld)) oldAssignQuery = oldAssignQuery.eq('target_level', parsedOld);
+    const { data: oldAssigns } = await oldAssignQuery;
+
+    if (oldAssigns && oldAssigns.length > 0) {
+      const nowIso = new Date().toISOString();
+      for (const a of oldAssigns) {
+        const { error: upErr } = await sb.from('theme_program_assignments')
+          .upsert({
+            theme_code: cleanCode,
+            target_level: parsedNew,
+            program_id: a.program_id,
+            is_active: true,
+            updated_at: nowIso
+          }, { onConflict: 'theme_code,target_level,program_id' });
+        if (!upErr) {
+          await sb.from('theme_program_assignments').delete().eq('id', a.id);
+        }
+      }
+    }
   } catch (err) {
     console.warn('[updateVaultThemeLevelCascade] assign cascade notice:', err);
   }
@@ -6512,6 +6551,10 @@ export async function upsertDynamicTestShell(config) {
     modulePrefix = 'VOCAB',
     category = 'words',
     durationMinutes = null,
+    wordsDurationMinutes = null,
+    phrasesDurationMinutes = null,
+    wordsAnswerType = null,
+    phrasesAnswerType = null,
     prerequisiteId = null,
     moduleId = null,
     answerType = null,
@@ -6749,6 +6792,10 @@ export async function upsertDynamicTestShell(config) {
       tier: isTest ? 'EXAM' : 'TASK',
       working_duration_minutes: effectiveDurationMinutes,
       duration_minutes: effectiveDurationMinutes,
+      ...(wordsDurationMinutes !== null && wordsDurationMinutes !== undefined ? { words_duration_minutes: Number(wordsDurationMinutes) } : {}),
+      ...(phrasesDurationMinutes !== null && phrasesDurationMinutes !== undefined ? { phrases_duration_minutes: Number(phrasesDurationMinutes) } : {}),
+      ...(wordsAnswerType ? { words_answer_type: wordsAnswerType } : {}),
+      ...(phrasesAnswerType ? { phrases_answer_type: phrasesAnswerType } : {}),
       minimum_required_score: effectiveMinScore,
       total_questions: expectedQuestions,
       snapshot_question_count: expectedQuestions
@@ -6829,9 +6876,11 @@ export async function updateClassTestsConfig(params = {}) {
     const lvlNum = clsInfo?.levels?.level_number;
     const progId = clsInfo?.program_id;
     if (lvlNum !== undefined && lvlNum !== null) {
-      let vq = sb.from('vocab_words').select('theme_code, topic_code, word_type, category, program_id').eq('target_level', lvlNum);
-      if (progId) vq = vq.or(`program_id.eq.${progId},program_id.is.null`);
-      const { data: vWords } = await vq;
+      const { data: vWords } = await sb
+        .from('vocabulary_vault')
+        .select('theme_code, topic_code, word_type, category')
+        .eq('target_level', lvlNum)
+        .is('deleted_at', null);
       for (const w of (vWords || [])) {
         const tc = String(w.theme_code || '').trim().toUpperCase();
         const top = String(w.topic_code || '').trim().toUpperCase();
@@ -6864,75 +6913,154 @@ export async function updateClassTestsConfig(params = {}) {
       || (row.payload && row.payload.category === 'phrases')
       || (row.shell_code && row.shell_code.toUpperCase().includes('PHRASE'))
       || (row.title && row.title.toUpperCase().includes('PHRASE'));
+    const isUnified = row.category === 'unified'
+      || (row.payload && (row.payload.category === 'unified' || row.payload.is_unified === true || row.payload.is_unified_test === true))
+      || (row.shell_code && row.shell_code.toUpperCase().includes('UNIFIED'))
+      || (row.title && row.title.toLowerCase().includes('words & phrases'));
 
     const updateData = {};
     if (isTest) {
       updateData.minimum_required_score = Number(testPassingScore);
-      const testAns = isPhrase ? (phrasesTestAnswerType || 'selection') : (wordsTestAnswerType || 'spoken');
+      const wordsAns = wordsTestAnswerType || 'spoken';
+      const phrasesAns = phrasesTestAnswerType || 'selection';
+      const testAns = isPhrase ? phrasesAns : wordsAns;
       updateData.answer_type = testAns;
       updateData.question_order = examQuestionOrder;
 
-      // Extract theme code to calculate actual Vault question count
+      // Extract theme code(s) to calculate actual Vault question count (supports cumulative themes)
       const thMatch = (row.shell_code && row.shell_code.match(/([A-H])(?:-|$)/i)) || (row.title && row.title.match(/Vocabulary\s+([A-H])/i));
       const th = (row.payload?.theme_code || extractThemeCodeFromTestRow(row) || (thMatch ? thMatch[1] : 'A')).toUpperCase();
-      const vaultExamCount = isPhrase ? (vaultThemePhrases.get(th) || 0) : (vaultThemeWords.get(th) || 0);
-      const payloadExamCount = Number(row.payload?.total_questions || row.payload?.words_count || 0);
-      let qCount = vaultExamCount || payloadExamCount || 120;
-      if (!vaultExamCount && !payloadExamCount) {
-        if (th === 'A') qCount = isPhrase ? 30 : 120;
-        else if (th === 'B') qCount = isPhrase ? 70 : 280;
-        else if (th === 'C') qCount = isPhrase ? 110 : 440;
-        else if (th === 'D') qCount = isPhrase ? 150 : 600;
-        else qCount = isPhrase ? 30 : 120;
-      }
+      const themeList = (Array.isArray(row.payload?.themes) && row.payload.themes.length > 0)
+        ? row.payload.themes.map(t => String(t).trim().toUpperCase())
+        : [th];
 
-      const customPace = isPhrase ? params.phrasesExamPaceSeconds : params.wordsExamPaceSeconds;
-      const customDur = isPhrase ? params.phrasesExamDurationMinutes : params.wordsExamDurationMinutes;
-      const examDur = (customDur && Number(customDur) > 0)
-        ? Number(customDur)
-        : calculateAutoDurationMinutes(qCount, testAns, isPhrase ? 'phrases' : 'words', customPace);
+      const sumVault = (map) => themeList.reduce((acc, t) => acc + (map.get(t) || 0), 0);
+      const vaultWordsExamCount = sumVault(vaultThemeWords);
+      const vaultPhrasesExamCount = sumVault(vaultThemePhrases);
 
-      updateData.working_duration_minutes = Number(examDur);
-      if (row.payload && typeof row.payload === 'object') {
-        updateData.payload = {
-          ...row.payload,
-          minimum_required_score: Number(testPassingScore),
-          answer_type: testAns,
-          working_duration_minutes: Number(examDur),
-          duration_minutes: Number(examDur),
-          question_order: examQuestionOrder
-        };
+      if (isUnified) {
+        const wCount = vaultWordsExamCount || Number(row.payload?.words_count || 0) || (themeList.length * 160);
+        const pCount = vaultPhrasesExamCount || Number(row.payload?.phrases_count || 0) || (themeList.length * 40);
+        const wDur = (params.wordsExamDurationMinutes && Number(params.wordsExamDurationMinutes) > 0)
+          ? Number(params.wordsExamDurationMinutes)
+          : calculateAutoDurationMinutes(wCount, wordsAns, 'words', params.wordsExamPaceSeconds);
+        const pDur = (params.phrasesExamDurationMinutes && Number(params.phrasesExamDurationMinutes) > 0)
+          ? Number(params.phrasesExamDurationMinutes)
+          : calculateAutoDurationMinutes(pCount, phrasesAns, 'phrases', params.phrasesExamPaceSeconds, 1);
+        const totalExamDur = wDur + pDur;
+
+        updateData.working_duration_minutes = totalExamDur;
+        if (row.payload && typeof row.payload === 'object') {
+          updateData.payload = {
+            ...row.payload,
+            minimum_required_score: Number(testPassingScore),
+            answer_type: wordsAns,
+            words_answer_type: wordsAns,
+            phrases_answer_type: phrasesAns,
+            words_duration_minutes: wDur,
+            phrases_duration_minutes: pDur,
+            working_duration_minutes: totalExamDur,
+            duration_minutes: totalExamDur,
+            question_order: examQuestionOrder
+          };
+        }
+      } else {
+        const vaultExamCount = isPhrase ? vaultPhrasesExamCount : vaultWordsExamCount;
+        const payloadExamCount = Number(row.payload?.total_questions || row.payload?.words_count || 0);
+        let qCount = vaultExamCount || payloadExamCount || 120;
+        if (!vaultExamCount && !payloadExamCount) {
+          if (th === 'A') qCount = isPhrase ? 30 : 120;
+          else if (th === 'B') qCount = isPhrase ? 70 : 280;
+          else if (th === 'C') qCount = isPhrase ? 110 : 440;
+          else if (th === 'D') qCount = isPhrase ? 150 : 600;
+          else qCount = isPhrase ? 30 : 120;
+        }
+
+        const customPace = isPhrase ? params.phrasesExamPaceSeconds : params.wordsExamPaceSeconds;
+        const customDur = isPhrase ? params.phrasesExamDurationMinutes : params.wordsExamDurationMinutes;
+        const examDur = (customDur && Number(customDur) > 0)
+          ? Number(customDur)
+          : calculateAutoDurationMinutes(qCount, testAns, isPhrase ? 'phrases' : 'words', customPace);
+
+        updateData.working_duration_minutes = Number(examDur);
+        if (row.payload && typeof row.payload === 'object') {
+          updateData.payload = {
+            ...row.payload,
+            minimum_required_score: Number(testPassingScore),
+            answer_type: testAns,
+            working_duration_minutes: Number(examDur),
+            duration_minutes: Number(examDur),
+            ...(isPhrase ? { phrases_duration_minutes: Number(examDur) } : { words_duration_minutes: Number(examDur) }),
+            question_order: examQuestionOrder
+          };
+        }
       }
       updatedTests++;
     } else {
-      const taskAns = isPhrase
-        ? (phrasesTaskAnswerType || taskAnswerType || 'spoken')
-        : (wordsTaskAnswerType || taskAnswerType || 'spoken');
+      const wordsAns = wordsTaskAnswerType || taskAnswerType || 'spoken';
+      const phrasesAns = phrasesTaskAnswerType || taskAnswerType || 'spoken';
+      const taskAns = isPhrase ? phrasesAns : wordsAns;
       const topCode = String(row.payload?.topic_code || '').trim().toUpperCase();
-      const vaultTaskCount = topCode ? (isPhrase ? (vaultTopicPhrases.get(topCode) || 0) : (vaultTopicWords.get(topCode) || 0)) : 0;
-      const payloadTaskCount = Number(row.payload?.total_questions || row.payload?.words_count || 0);
-      const qCount = vaultTaskCount || payloadTaskCount || (isPhrase ? 10 : 40);
-      const customPace = isPhrase ? params.phrasesTaskPaceSeconds : params.wordsTaskPaceSeconds;
-      const customDur = isPhrase ? phrasesTaskDurationMinutes : (wordsTaskDurationMinutes || taskDurationMinutes);
-      const dur = (customDur && Number(customDur) > 0 && !customPace)
-        ? Number(customDur)
-        : calculateAutoDurationMinutes(qCount, taskAns, isPhrase ? 'phrases' : 'words', customPace);
 
-      updateData.working_duration_minutes = Number(dur);
-      updateData.minimum_required_score = Number(taskPassingScore);
-      updateData.answer_type = taskAns;
-      updateData.question_order = taskQuestionOrder;
-      if (row.payload && typeof row.payload === 'object') {
-        updateData.payload = {
-          ...row.payload,
-          working_duration_minutes: Number(dur),
-          duration_minutes: Number(dur),
-          minimum_required_score: Number(taskPassingScore),
-          answer_type: taskAns,
-          question_order: taskQuestionOrder
-        };
-        if (taskRepetitions != null) {
-          updateData.payload.task_repetitions = Math.max(1, Number(taskRepetitions));
+      if (isUnified) {
+        const wCount = (topCode ? (vaultTopicWords.get(topCode) || 0) : 0) || Number(row.payload?.words_count || 0) || 40;
+        const pCount = (topCode ? (vaultTopicPhrases.get(topCode) || 0) : 0) || Number(row.payload?.phrases_count || 0) || 10;
+        const wDur = (wordsTaskDurationMinutes && Number(wordsTaskDurationMinutes) > 0 && !params.wordsTaskPaceSeconds)
+          ? Number(wordsTaskDurationMinutes)
+          : calculateAutoDurationMinutes(wCount, wordsAns, 'words', params.wordsTaskPaceSeconds);
+        const pDur = (phrasesTaskDurationMinutes && Number(phrasesTaskDurationMinutes) > 0 && !params.phrasesTaskPaceSeconds)
+          ? Number(phrasesTaskDurationMinutes)
+          : calculateAutoDurationMinutes(pCount, phrasesAns, 'phrases', params.phrasesTaskPaceSeconds, 1);
+        const totalTaskDur = wDur + pDur;
+
+        updateData.working_duration_minutes = totalTaskDur;
+        updateData.minimum_required_score = Number(taskPassingScore);
+        updateData.answer_type = wordsAns;
+        updateData.question_order = taskQuestionOrder;
+        if (row.payload && typeof row.payload === 'object') {
+          updateData.payload = {
+            ...row.payload,
+            working_duration_minutes: totalTaskDur,
+            duration_minutes: totalTaskDur,
+            words_duration_minutes: wDur,
+            phrases_duration_minutes: pDur,
+            words_answer_type: wordsAns,
+            phrases_answer_type: phrasesAns,
+            minimum_required_score: Number(taskPassingScore),
+            answer_type: wordsAns,
+            question_order: taskQuestionOrder
+          };
+          if (taskRepetitions != null) {
+            updateData.payload.task_repetitions = Math.max(1, Number(taskRepetitions));
+          }
+        }
+      } else {
+        const vaultTaskCount = topCode ? (isPhrase ? (vaultTopicPhrases.get(topCode) || 0) : (vaultTopicWords.get(topCode) || 0)) : 0;
+        const payloadTaskCount = Number(row.payload?.total_questions || row.payload?.words_count || 0);
+        const qCount = vaultTaskCount || payloadTaskCount || (isPhrase ? 10 : 40);
+        const customPace = isPhrase ? params.phrasesTaskPaceSeconds : params.wordsTaskPaceSeconds;
+        const customDur = isPhrase ? phrasesTaskDurationMinutes : (wordsTaskDurationMinutes || taskDurationMinutes);
+        const dur = (customDur && Number(customDur) > 0 && !customPace)
+          ? Number(customDur)
+          : calculateAutoDurationMinutes(qCount, taskAns, isPhrase ? 'phrases' : 'words', customPace);
+
+        updateData.working_duration_minutes = Number(dur);
+        updateData.minimum_required_score = Number(taskPassingScore);
+        updateData.answer_type = taskAns;
+        updateData.question_order = taskQuestionOrder;
+        if (row.payload && typeof row.payload === 'object') {
+          updateData.payload = {
+            ...row.payload,
+            working_duration_minutes: Number(dur),
+            duration_minutes: Number(dur),
+            ...(isPhrase ? { phrases_duration_minutes: Number(dur) } : { words_duration_minutes: Number(dur) }),
+            minimum_required_score: Number(taskPassingScore),
+            answer_type: taskAns,
+            question_order: taskQuestionOrder
+          };
+          if (taskRepetitions != null) {
+            updateData.payload.task_repetitions = Math.max(1, Number(taskRepetitions));
+          }
         }
       }
       updatedTasks++;
@@ -7214,6 +7342,14 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         if (isUnifiedMode) {
           hasAnyVocab = true;
           hasAnyPhrases = true;
+          const topicWordsCount = topicObj.vocabCount || topicObj.wordCount || 40;
+          const topicPhrasesCount = topicObj.phraseCount || 10;
+          const dynamicWordsDur = (config.wordsTaskDurationMinutes !== undefined && config.wordsTaskDurationMinutes !== null)
+            ? Number(config.wordsTaskDurationMinutes)
+            : calculateAutoDurationMinutes(topicWordsCount, wordsTaskAns, 'words', config.wordsTaskPaceSeconds);
+          const dynamicPhrasesDur = (config.phrasesTaskDurationMinutes !== undefined && config.phrasesTaskDurationMinutes !== null)
+            ? Number(config.phrasesTaskDurationMinutes)
+            : calculateAutoDurationMinutes(topicPhrasesCount, phrasesTaskAns, 'phrases', config.phrasesTaskPaceSeconds, 1);
           const { testId, action } = await upsertShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'TASK', themeName: themeData.name, topicName: topicName,
@@ -7222,7 +7358,11 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             modulePrefix: 'UNIFIED', category: 'unified',
             moduleId: vocabModuleId,
             answerType: wordsTaskAns,
-            durationMinutes: taskDur ? taskDur : (isUnifiedMode ? 15 : ((wordsTaskDur || 10) + (phrasesTaskDur || 5))),
+            wordsAnswerType: wordsTaskAns,
+            phrasesAnswerType: phrasesTaskAns,
+            durationMinutes: taskDur ? taskDur : (dynamicWordsDur + dynamicPhrasesDur),
+            wordsDurationMinutes: dynamicWordsDur,
+            phrasesDurationMinutes: dynamicPhrasesDur,
             minimumRequiredScore: taskPass,
             prerequisiteId: topicPrereqId,
             displayOrder: displayOrder++,
@@ -7297,11 +7437,17 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
 
       if (isUnifiedMode) {
         const examQCount = (levelNum === 0 && themeData.wordCount) ? themeData.wordCount : null;
+        const themeWordsCount = themeData.vocabCount || themeData.wordCount || 160;
+        const themePhrasesCount = themeData.phraseCount || 40;
+        const dynamicWordsExamDur = (config.wordsExamDurationMinutes !== undefined && config.wordsExamDurationMinutes !== null)
+          ? Number(config.wordsExamDurationMinutes)
+          : calculateAutoDurationMinutes(themeWordsCount, wordsTestAns, 'words', config.wordsExamPaceSeconds);
+        const dynamicPhrasesExamDur = (config.phrasesExamDurationMinutes !== undefined && config.phrasesExamDurationMinutes !== null)
+          ? Number(config.phrasesExamDurationMinutes)
+          : calculateAutoDurationMinutes(themePhrasesCount, phrasesTestAns, 'phrases', config.phrasesExamPaceSeconds, 1);
         const examDuration = config.examDurationMinutes !== undefined && config.examDurationMinutes !== null
           ? Number(config.examDurationMinutes)
-          : ((levelNum === 0 && examQCount)
-            ? calculateAutoDurationMinutes(examQCount, wordsTestAns, 'words')
-            : (config.wordsExamDurationMinutes || 40));
+          : (dynamicWordsExamDur + dynamicPhrasesExamDur);
         const { testId, action } = await upsertShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
           tier: 'EXAM', themeName: themeData.name, topicName: null,
@@ -7310,8 +7456,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           modulePrefix: 'UNIFIED', category: 'unified',
           moduleId: vocabModuleId,
           answerType: wordsTestAns,
+          wordsAnswerType: wordsTestAns,
+          phrasesAnswerType: phrasesTestAns,
           totalQuestions: examQCount,
           durationMinutes: examDuration,
+          wordsDurationMinutes: dynamicWordsExamDur,
+          phrasesDurationMinutes: dynamicPhrasesExamDur,
           minimumRequiredScore: testPass,
           prerequisiteId: lastThemeTaskId,
           displayOrder: displayOrder++,

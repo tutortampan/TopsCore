@@ -17,149 +17,267 @@ function renderLoadingState(msg = 'Loading...') {
 }
 
 export async function renderStudentsRegistration(area) {
-  let activeTab = window._activeStudentRegTab || localStorage.getItem('topscore_admin_student_reg_tab') || 'bulk';
-
-  const regTabs = [
-    { id: 'bulk', icon: getSvgIcon('upload', 14), title: 'Bulk Excel Import', label: 'Bulk Import (Excel / CSV)' },
-    { id: 'individual', icon: getSvgIcon('user', 14), title: 'Add Student (Individual)', label: 'Add Student (Individual)' }
-  ];
-
-  window._switchStudentRegTab = async (tabId) => {
-    activeTab = tabId;
-    window._activeStudentRegTab = tabId;
-    try {
-      localStorage.setItem('topscore_admin_student_reg_tab', tabId);
-      if (window.history && window.history.replaceState) {
-        window.history.replaceState(null, '', `#student-registration?tab=${tabId}`);
-      }
-    } catch (_) {}
-    if (window.setTopbarTabs) {
-      window.setTopbarTabs(regTabs, activeTab, 'window._switchStudentRegTab');
-    }
-    const container = document.getElementById('student-reg-workspace');
-    if (!container) return;
-    if (tabId === 'bulk') {
-      await renderBulkImportView(container);
-    } else {
-      await renderIndividualRegView(container);
-    }
-  };
-
   if (window.setTopbarTabs) {
-    window.setTopbarTabs(regTabs, activeTab, 'window._switchStudentRegTab');
+    window.setTopbarTabs([], '', '');
   }
 
   area.innerHTML = `
-    <div id="student-reg-workspace" style="display:flex; flex-direction:column; flex:1; height:100%; min-height:0;">
+    <div id="student-reg-workspace" style="display:flex; flex-direction:column; flex:1; height:100%; min-height:0; gap:10px;">
       ${renderLoadingState('Loading registration workspace...')}
     </div>
   `;
   const container = document.getElementById('student-reg-workspace');
-
-  if (activeTab === 'bulk') {
-    await renderBulkImportView(container);
-  } else {
-    await renderIndividualRegView(container);
-  }
+  await renderUnifiedRegistrationView(container, area);
 }
 
 // ============================================================
-// TAB 1: BULK EXCEL / CSV IMPORT
+// UNIFIED STUDENT REGISTRATION (BULK + INDIVIDUAL + RECENT)
 // ============================================================
-async function renderBulkImportView(container) {
-  container.innerHTML = renderLoadingState('Loading bulk import options...');
+async function renderUnifiedRegistrationView(container, rootArea) {
+  container.innerHTML = renderLoadingState('Loading registration options...');
 
   let allInsts = [];
   let allProgs = [];
   let allBatches = [];
+  let recentStudents = [];
 
   try {
     const results = await Promise.allSettled([
       adminFetchAll('institutions', 'id, name, is_active'),
       adminFetchAll('programs', 'id, name, is_active, institution_id'),
-      adminFetchAll('batches', 'id, name, is_active, program_id')
+      adminFetchAll('batches', 'id, name, is_active, program_id'),
+      adminFetchAll('students', 'id, name, gender, birth_date, is_active, created_at, institution_id, program_id, batch_id, institutions(name), programs(name), batches!batch_id(name)')
     ]);
     allInsts = (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) ? results[0].value : [];
     allProgs = (results[1].status === 'fulfilled' && Array.isArray(results[1].value)) ? results[1].value : [];
     allBatches = (results[2].status === 'fulfilled' && Array.isArray(results[2].value)) ? results[2].value : [];
+    recentStudents = (results[3].status === 'fulfilled' && Array.isArray(results[3].value)) ? results[3].value : [];
   } catch (err) {
-    console.warn('[renderBulkImportView] Lookup load failed:', err);
+    console.warn('[renderUnifiedRegistrationView] Lookup load failed:', err);
   }
 
   const sortedInsts = allInsts.filter(i => i && !i.deleted_at && i.is_active !== false).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   const sortedProgs = allProgs.filter(p => p && !p.deleted_at && p.is_active !== false).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   const sortedBatches = allBatches.filter(b => b && !b.deleted_at && b.is_active !== false).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const recentList = recentStudents.filter(s => s && !s.deleted_at).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 10);
+
+  const renderRecentRowsHtml = (list) => {
+    if (!list || list.length === 0) {
+      return `
+        <tr>
+          <td colspan="7">
+            <div class="smart-empty-state">
+              <span class="smart-empty-icon">${getSvgIcon('users', 32)}</span>
+              <div class="smart-empty-title">No students registered yet</div>
+              <div class="smart-empty-subtext">Use Bulk Import or Individual Registration above to enroll your first student.</div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+    return list.map((s, idx) => `
+      <tr>
+        <td style="text-align: center; color: var(--fm-text-muted);">${idx + 1}</td>
+        <td>${escapeHtml(s.institutions?.name || '—')}</td>
+        <td>${escapeHtml(s.programs?.name || '—')}</td>
+        <td>${escapeHtml(s.batches?.name || '—')}</td>
+        <td style="font-weight: 600; color: #fff; cursor: pointer;" data-edit-student-id="${s.id}" title="Click to view/edit profile">${escapeHtml(s.name)}</td>
+        <td style="text-align: center;">
+          <span class="status-dot-badge">
+            <span class="status-dot ${s.is_active ? 'dot-success' : 'dot-draft'}"></span>
+            ${s.is_active ? 'Active' : 'Inactive'}
+          </span>
+        </td>
+        <td style="text-align: center; font-size: 12px; color: var(--fm-text-muted);">
+          ${s.created_at ? s.created_at.split('T')[0] : '—'}
+        </td>
+      </tr>
+    `).join('');
+  };
 
   container.innerHTML = `
-    <div class="section-header" style="flex-shrink: 0; margin-bottom: 1rem;">
-      <div>
-        <h2 class="section-title text-gradient" style="font-size: 20px; display: flex; align-items: center; gap: 8px;">${getSvgIcon('upload', 20)} Bulk Student Ingestion</h2>
-        <p class="section-subtitle">Import student rosters from Excel (.xlsx / .xls) or CSV. PINs automatically default to <strong>1234</strong> (SHA-256 hashed).</p>
+    <!-- TOP ROW: BULK IMPORT (LEFT) + INDIVIDUAL REGISTRATION (RIGHT) -->
+    <div style="display: grid; grid-template-columns: minmax(460px, 1fr) minmax(460px, 1fr); gap: 10px; align-items: stretch; flex-shrink: 0; width: 100%;">
+      <!-- LEFT: BULK STUDENT INGESTION -->
+      <div class="glass-card" style="padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+        <div class="d-flex align-center justify-between gap-2">
+          <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <span>${getSvgIcon('upload', 16)}</span> Bulk Student Ingestion
+          </h3>
+          <span class="badge badge-info" style="font-size: 12px;">Default PIN: 1234</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+          <div class="form-group mb-0">
+            <label class="form-label" style="font-size: 12px;">1. Institution</label>
+            <select class="form-control" id="bulk-inst-select">
+              <option value="">— From Sheet —</option>
+              ${sortedInsts.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label" style="font-size: 12px;">2. Program</label>
+            <select class="form-control" id="bulk-prog-select">
+              <option value="">— From Sheet —</option>
+              ${sortedProgs.map(p => `<option value="${p.id}" data-inst="${p.institution_id}">${escapeHtml(p.name)}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label" style="font-size: 12px;">3. Batch</label>
+            <select class="form-control" id="bulk-batch-select" disabled>
+              <option value="">— Select Prog —</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 8px; align-items: stretch; flex: 1;">
+          <!-- Interactive Drag & Drop Box -->
+          <div class="student-reg-dropzone" id="bulk-dropzone" style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; padding: 10px; min-height: 110px;">
+            <input type="file" id="import-students-file" accept=".xlsx,.xls,.csv" style="display: none;" />
+            <span class="student-reg-dropzone-icon">${getSvgIcon('upload', 26)}</span>
+            <div style="font-size: 12px; font-weight: 600; color: #fff; text-align: center;">Click or drag &amp; drop Excel / CSV</div>
+            <div style="font-size: 12px; color: var(--fm-text-muted); margin-top: 2px;">.xlsx, .xls, .csv</div>
+            <div id="dropzone-file-name" style="margin-top: 4px; font-size: 12px; font-weight: 700; color: #818cf8; display: none; text-align: center;"></div>
+          </div>
+
+          <!-- Format Guide -->
+          <div style="padding: 10px; border-radius: 8px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+            <div class="d-flex align-center justify-between gap-2">
+              <span class="text-xs fw-700 text-gradient" style="font-size: 12px;">COLUMN HEADERS</span>
+              <span class="badge badge-info" style="font-size: 12px;">Case-Insensitive</span>
+            </div>
+            <div class="text-xs text-muted d-flex flex-column gap-1" style="line-height: 1.35; font-size: 12px;">
+              <div>&bull; <b>Req:</b> <code>INSTITUTION</code>, <code>PROGRAM</code>, <code>BATCH</code>, <code>NAME</code></div>
+              <div>&bull; <b>Opt:</b> <code>GENDER</code>, <code>BIRTH_DATE</code>, <code>PIN</code></div>
+              <div>&bull; <b>Pacing:</b> Auto-unlocks <b>Level 1</b>.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: INDIVIDUAL STUDENT REGISTRATION -->
+      <div class="glass-card" style="padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+        <div class="d-flex align-center justify-between gap-2">
+          <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <span>${getSvgIcon('user', 16)}</span> Individual Student Registration
+          </h3>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+          <!-- Row 1: Full Name (2 cols) + Gender (1 col) -->
+          <div class="form-group mb-0" style="grid-column: span 2;">
+            <label class="form-label" style="font-size: 12px;">Full Name <span style="color: var(--grade-e);">*</span></label>
+            <input type="text" class="form-control" id="indiv-name" placeholder="e.g. Johnathan Doe" autocomplete="off" />
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label" style="font-size: 12px;">Honorific &amp; Gender</label>
+            <select class="form-control" id="indiv-gender">
+              <option value="">— Unassigned —</option>
+              <option value="male">Mister (Male)</option>
+              <option value="female">Miss (Female)</option>
+            </select>
+          </div>
+
+          <!-- Row 2: DOB + Institution + Program -->
+          <div class="form-group mb-0">
+            <label class="form-label" style="font-size: 12px;">Date of Birth</label>
+            <input type="date" class="form-control" id="indiv-birth" />
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label" style="font-size: 12px;">Institution <span style="color: var(--grade-e);">*</span></label>
+            <select class="form-control" id="indiv-inst">
+              <option value="">— Select Institution —</option>
+              ${sortedInsts.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label" style="font-size: 12px;">Program <span style="color: var(--grade-e);">*</span></label>
+            <select class="form-control" id="indiv-prog">
+              <option value="">— Select Program —</option>
+              ${sortedProgs.map(p => `<option value="${p.id}" data-inst="${p.institution_id}">[${escapeHtml(p.name)}]</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- Row 3: Batch + PIN + Status -->
+          <div class="form-group mb-0">
+            <div class="d-flex align-center justify-between mb-1">
+              <label class="form-label" style="font-size: 12px; margin: 0;">Batch <span style="color: var(--grade-e);">*</span></label>
+              <button type="button" class="btn btn-ghost btn-xs text-primary" id="btn-quick-new-batch" style="padding: 0; font-size: 12px;">+ New Batch</button>
+            </div>
+            <select class="form-control" id="indiv-batch" disabled>
+              <option value="">— Select Program First —</option>
+            </select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label" style="font-size: 12px;">Personal PIN <span style="color: var(--grade-e);">*</span></label>
+            <input type="text" class="form-control" id="indiv-pin" value="1234" autocomplete="new-password" />
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label" style="font-size: 12px;">Account Status</label>
+            <select class="form-control" id="indiv-active">
+              <option value="true">Active (Eligible for tests)</option>
+              <option value="false">Inactive / Suspended</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="d-flex align-center justify-end gap-2 pt-2 mt-auto" style="border-top: 1px solid rgba(255, 255, 255, 0.08);">
+          <button class="btn btn-ghost btn-sm" id="btn-reset-indiv-form">Clear Form</button>
+          <button class="btn btn-primary btn-sm" id="btn-save-indiv-student" style="min-width: 150px;">✓ Register Student</button>
+        </div>
       </div>
     </div>
 
-    <div class="d-flex flex-wrap gap-4 align-stretch" style="margin-bottom: 1.5rem;">
-      <!-- UPLOAD & OVERRIDES CARD -->
-      <div class="glass-card p-5" style="flex: 1; min-width: 320px; max-width: 520px; display: flex; flex-direction: column; gap: 1rem;">
-        <h3 style="font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
-          <span>${getSvgIcon('settings', 16)}</span> Target Scope (Default / Override)
-        </h3>
-
-        <div class="form-group mb-2">
-          <label class="form-label" style="font-size: 12px;">1. Target Institution</label>
-          <select class="form-control" id="bulk-inst-select">
-            <option value="">— Use Institution from Spreadsheet —</option>
-            ${sortedInsts.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')}
-          </select>
-          <span class="text-muted text-xs mt-1" style="display:block;">Optionally force all rows into this Institution.</span>
-        </div>
-
-        <div class="form-group mb-2">
-          <label class="form-label" style="font-size: 12px;">2. Target Program</label>
-          <select class="form-control" id="bulk-prog-select">
-            <option value="">— Use Program from Spreadsheet —</option>
-            ${sortedProgs.map(p => `<option value="${p.id}" data-inst="${p.institution_id}">${escapeHtml(p.name)}</option>`).join('')}
-          </select>
-          <span class="text-muted text-xs mt-1" style="display:block;">Optionally force all rows into this Program.</span>
-        </div>
-
-        <div class="form-group mb-3">
-          <label class="form-label" style="font-size: 12px;">3. Target Batch</label>
-          <select class="form-control" id="bulk-batch-select" disabled>
-            <option value="">— Select Program First —</option>
-          </select>
-          <span class="text-muted text-xs mt-1" style="display:block;">Optionally force all rows into this Batch.</span>
-        </div>
-
-        <!-- Interactive Drag & Drop Box -->
-        <div class="student-reg-dropzone" id="bulk-dropzone">
-          <input type="file" id="import-students-file" accept=".xlsx,.xls,.csv" style="display: none;" />
-          <span class="student-reg-dropzone-icon">${getSvgIcon('upload', 32)}</span>
-          <div style="font-size: 12px; font-weight: 600; color: #fff;">Click to select or drag & drop file</div>
-          <div style="font-size: 12px; color: var(--fm-text-muted); margin-top: 4px;">Supports Excel (.xlsx, .xls) and CSV (.csv)</div>
-          <div id="dropzone-file-name" style="margin-top: 8px; font-size: 12px; font-weight: 700; color: #818cf8; display: none;"></div>
-        </div>
-
-        <!-- Format Guide -->
-        <div class="p-3 rounded mt-2" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25);">
-          <div class="d-flex align-center justify-between gap-2 mb-1">
-            <span class="text-xs fw-700 text-gradient">SPREADSHEET COLUMN HEADERS</span>
-            <span class="badge badge-info" style="font-size: 12px;">Case-Insensitive</span>
+    <!-- BOTTOM ROW: RECENTLY REGISTERED STUDENTS (DEFAULT) OR SPREADSHEET PREVIEW -->
+    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; width: 100%;">
+      <!-- RECENTLY REGISTERED STUDENTS CARD -->
+      <div class="glass-card" id="indiv-recent-card" style="width: 100%; padding: 10px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0;">
+        <div class="d-flex align-center justify-between flex-wrap gap-2">
+          <div class="d-flex align-center gap-3">
+            <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">${getSvgIcon('clipboard', 16)} Recently Registered Students</h3>
+            <span class="text-xs text-muted" style="font-size: 12px;">Latest 10 enrolled students in TopsCore</span>
           </div>
-          <div class="text-xs text-muted d-flex flex-column gap-1" style="line-height: 1.4;">
-            <div>&bull; <b>Required:</b> <code>INSTITUTION</code>, <code>PROGRAM</code>, <code>BATCH</code>, <code>NAME</code></div>
-            <div>&bull; <b>Optional:</b> <code>GENDER</code> (male/female), <code>BIRTH_DATE</code> (YYYY-MM-DD), <code>PIN</code></div>
-            <div>&bull; <b>Pacing:</b> Students will auto-unlock <b>Level 1</b> across all active classes.</div>
-          </div>
+          <button class="btn btn-ghost btn-xs" id="btn-refresh-recent" style="display: inline-flex; align-items: center; gap: 4px;">${getSvgIcon('refresh', 14)} Refresh List</button>
+        </div>
+
+        <div class="table-wrap table-compact sticky-first" style="flex: 1; min-height: 0; overflow: auto; width: 100%;">
+          <table class="data-table" style="width: 100%;">
+            <thead>
+              <tr>
+                <th style="width: 38px; text-align: center;">#</th>
+                <th>INSTITUTION</th>
+                <th>PROGRAM</th>
+                <th>BATCH</th>
+                <th>STUDENT NAME</th>
+                <th style="width: 95px; text-align: center;">STATUS</th>
+                <th style="width: 100px; text-align: center;">ENROLLED</th>
+              </tr>
+            </thead>
+            <tbody id="indiv-recent-tbody">
+              ${renderRecentRowsHtml(recentList)}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <!-- PREVIEW & CONFIRM CARD -->
-      <div class="glass-card p-5" id="bulk-preview-card" style="flex: 2; min-width: 400px; display: none; flex-direction: column;">
-        <div class="d-flex align-center justify-between flex-wrap gap-3 pb-3 mb-3" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-          <div>
+      <!-- SPREADSHEET PREVIEW CARD (SHOWN WHEN FILE UPLOADED) -->
+      <div class="glass-card" id="bulk-preview-card" style="width: 100%; padding: 10px; display: none; flex-direction: column; gap: 8px; flex: 1; min-height: 0;">
+        <div class="d-flex align-center justify-between flex-wrap gap-2 pb-2" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+          <div class="d-flex align-center gap-3 flex-wrap">
             <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;">Spreadsheet Preview</h3>
-            <p class="text-xs text-muted" id="preview-row-count" style="margin: 2px 0 0 0;">0 students loaded from file</p>
+            <span class="text-xs text-muted" id="preview-row-count" style="font-size: 12px;">0 students loaded from file</span>
+            <div class="d-flex gap-2 flex-wrap" id="preview-summary-chips">
+              <span class="badge badge-info" id="chip-total">Total: 0</span>
+              <span class="badge badge-success" id="chip-new">${getSvgIcon('sparkles', 12)} New: 0</span>
+              <span class="badge badge-warning" id="chip-merge">${getSvgIcon('refresh', 12)} Merge: 0</span>
+            </div>
           </div>
           <div class="d-flex align-center gap-2">
             <button class="btn btn-secondary btn-sm" id="btn-cancel-preview">CLOSE</button>
@@ -167,14 +285,7 @@ async function renderBulkImportView(container) {
           </div>
         </div>
 
-        <!-- Summary Chips -->
-        <div class="d-flex gap-2 flex-wrap mb-3" id="preview-summary-chips">
-          <span class="badge badge-info" id="chip-total">Total: 0</span>
-          <span class="badge badge-success" id="chip-new">${getSvgIcon('sparkles', 12)} New: 0</span>
-          <span class="badge badge-warning" id="chip-merge">${getSvgIcon('refresh', 12)} Merge: 0</span>
-        </div>
-
-        <div class="table-wrap table-compact" style="flex: 1; max-height: 480px; overflow-y: auto;">
+        <div class="table-wrap table-compact" style="flex: 1; min-height: 0; overflow-y: auto; width: 100%;">
           <table class="data-table" style="width: 100%;">
             <thead>
               <tr>
@@ -193,6 +304,8 @@ async function renderBulkImportView(container) {
       </div>
     </div>
   `;
+
+  const recentCard = document.getElementById('indiv-recent-card');
 
   // --- Element Binding & Cascading Dropdowns ---
   const instSelect = document.getElementById('bulk-inst-select');
@@ -272,73 +385,6 @@ async function renderBulkImportView(container) {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       fileInput.files = e.dataTransfer.files;
       fileInput.dispatchEvent(new Event('change'));
-    }
-  });
-
-  if (typeof window.setBottomInfobar === 'function') {
-    const leftHtml = `
-      <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;font-weight:600;">
-        <span><strong style="color:#f8fafc;">Domain B</strong> · Student Ingestion Engine</span>
-        <span>·</span>
-        <span style="color:#38bdf8;font-weight:700;">Bulk Mode</span>
-      </div>
-    `;
-    const rightHtml = `
-      <div style="display:flex;align-items:center;gap:8px;">
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-export-students-csv" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;">
-          ${getSvgIcon('download', 14)} Export CSV
-        </button>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-dl-student-template" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
-          ${getSvgIcon('download', 14)} Download Template (.xlsx)
-        </button>
-      </div>
-    `;
-    window.setBottomInfobar(leftHtml, rightHtml);
-  }
-
-  // --- Download Template ---
-  document.getElementById('btn-dl-student-template')?.addEventListener('click', () => {
-    if (typeof XLSX === 'undefined') {
-      showToast('SheetJS is not loaded yet.', 'error');
-      return;
-    }
-    const sampleData = [
-      { 'INSTITUTION': 'CEC', 'PROGRAM': 'Camp', 'BATCH': 'Batch 01', 'NAME': 'Jane Doe', 'GENDER': 'female', 'PIN': '1234' },
-      { 'INSTITUTION': 'CEC', 'PROGRAM': 'Camp', 'BATCH': 'Batch 01', 'NAME': 'John Smith', 'GENDER': 'male', 'PIN': '1234' },
-      { 'INSTITUTION': 'CEC', 'PROGRAM': 'Hospitality', 'BATCH': 'Batch 02', 'NAME': 'Michael Scott', 'GENDER': 'male', 'PIN': '1234' }
-    ];
-    const ws = XLSX.utils.json_to_sheet(sampleData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Student Roster');
-    XLSX.writeFile(wb, 'Template_Students_Registration.xlsx');
-    showToast('Student template downloaded successfully.', 'success');
-  });
-
-  // --- Export CSV ---
-  document.getElementById('btn-export-students-csv')?.addEventListener('click', async () => {
-    if (typeof window.exportStudentsGradebook === 'function') {
-      await window.exportStudentsGradebook();
-    } else {
-      showToast('Exporting student records...', 'info');
-      try {
-        const stds = await adminFetchAll('students', 'name, gender, birth_date, is_active, created_at, programs(name), batches!batch_id(name)');
-        if (!stds || stds.length === 0) { showToast('No students to export.', 'warning'); return; }
-        const exportRows = stds.map(s => ({
-          'Name': s.name,
-          'Gender': s.gender || '',
-          'Program': s.programs?.name || '',
-          'Batch': s.batches?.name || '',
-          'Status': s.is_active ? 'Active' : 'Inactive',
-          'Enrolled': s.created_at ? s.created_at.split('T')[0] : ''
-        }));
-        const ws = XLSX.utils.json_to_sheet(exportRows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Active Students');
-        XLSX.writeFile(wb, `Students_Export_${new Date().toISOString().slice(0,10)}.xlsx`);
-        showToast('Export complete.', 'success');
-      } catch (err) {
-        showToast('Export failed: ' + err.message, 'error');
-      }
     }
   });
 
@@ -544,6 +590,7 @@ async function renderBulkImportView(container) {
 
         // Render preview table
         renderPreviewRows();
+        if (recentCard) recentCard.style.display = 'none';
         previewCard.style.display = 'flex';
         showToast(`Loaded ${parsedStudents.length} student records for review.`, 'info');
       } catch (err) {
@@ -587,6 +634,7 @@ async function renderBulkImportView(container) {
   // --- Cancel Preview ---
   document.getElementById('btn-cancel-preview')?.addEventListener('click', () => {
     previewCard.style.display = 'none';
+    if (recentCard) recentCard.style.display = 'flex';
     fileInput.value = '';
     parsedStudents = [];
     if (fileNameDisplay) fileNameDisplay.style.display = 'none';
@@ -757,197 +805,50 @@ async function renderBulkImportView(container) {
       hideLoading();
       showToast(`Success! ${insertedCount} new students enrolled, ${updatedCount} merged!`, 'success');
       previewCard.style.display = 'none';
+      if (recentCard) recentCard.style.display = 'flex';
       fileInput.value = '';
       parsedStudents = [];
       if (fileNameDisplay) fileNameDisplay.style.display = 'none';
+      await refreshRecentStudents();
     } catch (err) {
       hideLoading();
       showToast('Error saving students: ' + err.message, 'error');
     }
   });
-}
 
-// ============================================================
-// TAB 2: INDIVIDUAL STUDENT REGISTRATION
-// ============================================================
-async function renderIndividualRegView(container) {
-  container.innerHTML = renderLoadingState('Loading student registration form...');
+  // --- Refresh Recent Students Helper ---
+  const bindRecentEditClicks = () => {
+    container.querySelectorAll('[data-edit-student-id]').forEach(cell => {
+      cell.addEventListener('click', (e) => {
+        const studentId = e.currentTarget.getAttribute('data-edit-student-id');
+        const studentObj = recentStudents.find(s => s.id === studentId);
+        if (studentObj && typeof window.openStudentFullEdit === 'function') {
+          window.openStudentFullEdit(studentObj, () => refreshRecentStudents());
+        }
+      });
+    });
+  };
 
-  let allInsts = [];
-  let allProgs = [];
-  let allBatches = [];
-  let recentStudents = [];
-
-  try {
-    const results = await Promise.allSettled([
-      adminFetchAll('institutions', 'id, name, is_active'),
-      adminFetchAll('programs', 'id, name, is_active, institution_id'),
-      adminFetchAll('batches', 'id, name, is_active, program_id'),
-      adminFetchAll('students', 'id, name, gender, birth_date, is_active, created_at, institution_id, program_id, batch_id, institutions(name), programs(name), batches!batch_id(name)')
-    ]);
-    allInsts = (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) ? results[0].value : [];
-    allProgs = (results[1].status === 'fulfilled' && Array.isArray(results[1].value)) ? results[1].value : [];
-    allBatches = (results[2].status === 'fulfilled' && Array.isArray(results[2].value)) ? results[2].value : [];
-    recentStudents = (results[3].status === 'fulfilled' && Array.isArray(results[3].value)) ? results[3].value : [];
-  } catch (err) {
-    console.warn('[renderIndividualRegView] Data load failed:', err);
+  async function refreshRecentStudents() {
+    try {
+      const fresh = await adminFetchAll('students', 'id, name, gender, birth_date, is_active, created_at, institution_id, program_id, batch_id, institutions(name), programs(name), batches!batch_id(name)');
+      if (Array.isArray(fresh)) {
+        recentStudents = fresh;
+        const latest = recentStudents.filter(s => s && !s.deleted_at).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 10);
+        const tbody = document.getElementById('indiv-recent-tbody');
+        if (tbody) {
+          tbody.innerHTML = renderRecentRowsHtml(latest);
+          bindRecentEditClicks();
+        }
+      }
+    } catch (err) {
+      console.warn('[refreshRecentStudents] Failed:', err);
+    }
   }
 
-  const sortedInsts = allInsts.filter(i => i && !i.deleted_at && i.is_active !== false).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  const sortedProgs = allProgs.filter(p => p && !p.deleted_at && p.is_active !== false).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  const sortedBatches = allBatches.filter(b => b && !b.deleted_at && b.is_active !== false).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  bindRecentEditClicks();
 
-  // Sort recent students by creation descending
-  const recentList = recentStudents.filter(s => s && !s.deleted_at).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 10);
-
-  container.innerHTML = `
-    <div class="section-header" style="flex-shrink: 0; margin-bottom: 1rem;">
-      <div>
-        <h2 class="section-title text-gradient" style="font-size: 20px; display: flex; align-items: center; gap: 8px;">${getSvgIcon('user', 20)} Individual Student Registration</h2>
-        <p class="section-subtitle">Enroll an individual student directly into an institution, program, and batch with instant credentials.</p>
-      </div>
-    </div>
-
-    <!-- MAIN REGISTRATION FORM -->
-    <div class="glass-card p-5 mb-5" style="max-width: 900px;">
-      <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
-        <span>${getSvgIcon('file-text', 16)}</span> New Student Details
-      </h3>
-
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem 1.25rem;">
-        <!-- Full Name -->
-        <div class="form-group" style="grid-column: 1 / -1;">
-          <label class="form-label" style="font-size: 12px;">Full Name <span style="color: var(--grade-e);">*</span></label>
-          <input type="text" class="form-control" id="indiv-name" placeholder="e.g. Johnathan Doe" autocomplete="off" />
-        </div>
-
-        <!-- Gender / Honorific -->
-        <div class="form-group">
-          <label class="form-label" style="font-size: 12px;">Honorific &amp; Gender</label>
-          <select class="form-control" id="indiv-gender">
-            <option value="">— Unassigned —</option>
-            <option value="male">Mister (Male)</option>
-            <option value="female">Miss (Female)</option>
-          </select>
-        </div>
-
-        <!-- Date of Birth -->
-        <div class="form-group">
-          <label class="form-label" style="font-size: 12px;">Date of Birth</label>
-          <input type="date" class="form-control" id="indiv-birth" />
-        </div>
-
-        <!-- Institution -->
-        <div class="form-group">
-          <label class="form-label" style="font-size: 12px;">Institution <span style="color: var(--grade-e);">*</span></label>
-          <select class="form-control" id="indiv-inst">
-            <option value="">— Select Institution —</option>
-            ${sortedInsts.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')}
-          </select>
-        </div>
-
-        <!-- Program -->
-        <div class="form-group">
-          <label class="form-label" style="font-size: 12px;">Program <span style="color: var(--grade-e);">*</span></label>
-          <select class="form-control" id="indiv-prog">
-            <option value="">— Select Program —</option>
-            ${sortedProgs.map(p => `<option value="${p.id}" data-inst="${p.institution_id}">[${escapeHtml(p.name)}]</option>`).join('')}
-          </select>
-        </div>
-
-        <!-- Batch -->
-        <div class="form-group">
-          <div class="d-flex align-center justify-between mb-1">
-            <label class="form-label" style="font-size: 12px; margin: 0;">Batch <span style="color: var(--grade-e);">*</span></label>
-            <button type="button" class="btn btn-ghost btn-xs text-primary" id="btn-quick-new-batch" style="padding: 0; font-size: 12px;">+ New Batch</button>
-          </div>
-          <select class="form-control" id="indiv-batch" disabled>
-            <option value="">— Select Program First —</option>
-          </select>
-        </div>
-
-        <!-- PIN -->
-        <div class="form-group">
-          <label class="form-label" style="font-size: 12px;">Personal PIN <span style="color: var(--grade-e);">*</span></label>
-          <input type="text" class="form-control" id="indiv-pin" value="1234" autocomplete="new-password" />
-          <span class="text-muted text-xs mt-1" style="display:block;">Default preset is 1234 (hashed on save).</span>
-        </div>
-
-        <!-- Account Status -->
-        <div class="form-group">
-          <label class="form-label" style="font-size: 12px;">Account Status</label>
-          <select class="form-control" id="indiv-active">
-            <option value="true">Active (Eligible for tests)</option>
-            <option value="false">Inactive / Suspended</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="d-flex align-center gap-3 mt-4 pt-3" style="border-top: 1px solid rgba(255, 255, 255, 0.08);">
-        <button class="btn btn-primary btn-sm" id="btn-save-indiv-student" style="min-width: 150px;">✓ Register Student</button>
-        <button class="btn btn-ghost btn-sm" id="btn-reset-indiv-form">Clear Form</button>
-      </div>
-    </div>
-
-    <!-- RECENTLY REGISTERED STUDENTS TABLE -->
-    <div class="glass-card p-5" style="max-width: 900px;">
-      <div class="d-flex align-center justify-between flex-wrap gap-2 mb-3">
-        <div>
-          <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">${getSvgIcon('clipboard', 16)} Recently Registered Students</h3>
-          <p class="text-xs text-muted" style="margin: 2px 0 0 0;">Latest 10 enrolled students in TopsCore</p>
-        </div>
-        <button class="btn btn-ghost btn-xs" id="btn-refresh-recent" style="display: inline-flex; align-items: center; gap: 4px;">${getSvgIcon('refresh', 14)} Refresh List</button>
-      </div>
-
-      <div class="table-wrap table-compact sticky-first">
-        <table class="data-table" style="width: 100%;">
-          <thead>
-            <tr>
-              <th style="width: 38px; text-align: center;">#</th>
-              <th>INSTITUTION</th>
-              <th>PROGRAM</th>
-              <th>BATCH</th>
-              <th>STUDENT NAME</th>
-              <th style="width: 95px; text-align: center;">STATUS</th>
-              <th style="width: 90px; text-align: center;">ENROLLED</th>
-            </tr>
-          </thead>
-          <tbody id="indiv-recent-tbody">
-            ${recentList.length === 0 ? `
-              <tr>
-                <td colspan="7">
-                  <div class="smart-empty-state">
-                    <span class="smart-empty-icon">${getSvgIcon('users', 32)}</span>
-                    <div class="smart-empty-title">No students registered yet</div>
-                    <div class="smart-empty-subtext">Use the registration form above to enroll your first student.</div>
-                  </div>
-                </td>
-              </tr>
-            ` : recentList.map((s, idx) => `
-              <tr>
-                <td style="text-align: center; color: var(--fm-text-muted);">${idx + 1}</td>
-                <td>${escapeHtml(s.institutions?.name || '—')}</td>
-                <td>${escapeHtml(s.programs?.name || '—')}</td>
-                <td>${escapeHtml(s.batches?.name || '—')}</td>
-                <td style="font-weight: 600; color: #fff; cursor: pointer;" class="btn-edit-student" data-id="${s.id}" title="Click to view/edit profile">${escapeHtml(s.name)}</td>
-                <td style="text-align: center;">
-                  <span class="status-dot-badge">
-                    <span class="status-dot ${s.is_active ? 'dot-success' : 'dot-draft'}"></span>
-                    ${s.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td style="text-align: center; font-size: 12px; color: var(--fm-text-muted);">
-                  ${s.created_at ? s.created_at.split('T')[0] : '—'}
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-
-  // --- Cascading Dropdown Logic ---
+  // --- Individual Cascading Dropdown Logic ---
   const instEl = document.getElementById('indiv-inst');
   const progEl = document.getElementById('indiv-prog');
   const batchEl = document.getElementById('indiv-batch');
@@ -1181,8 +1082,8 @@ async function renderIndividualRegView(container) {
       document.getElementById('indiv-pin').value = '1234';
       document.getElementById('indiv-name').focus();
 
-      // Reload view to update recent list
-      await renderIndividualRegView(container);
+      // Refresh recent students table in-place
+      await refreshRecentStudents();
     } catch (err) {
       showToast('Registration failed: ' + err.message, 'error');
     } finally {
@@ -1191,56 +1092,77 @@ async function renderIndividualRegView(container) {
     }
   });
 
-  // --- Bind Edit Buttons in Recent Table ---
-  container.querySelectorAll('.btn-edit-student').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const studentId = e.currentTarget.getAttribute('data-id');
-      const studentObj = recentStudents.find(s => s.id === studentId);
-      if (studentObj && typeof window.openStudentFullEdit === 'function') {
-        window.openStudentFullEdit(studentObj, () => renderIndividualRegView(container));
-      }
-    });
-  });
-
   document.getElementById('btn-refresh-recent')?.addEventListener('click', () => {
-    renderIndividualRegView(container);
+    refreshRecentStudents();
   });
 
   if (typeof window.setBottomInfobar === 'function') {
-    const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
-    const editBtnStyle = isEditOn
-      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--primary-tactical, #38bdf8);border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
-      : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
-    const editBtnLabel = isEditOn
-      ? `${getSvgIcon('check-circle', 14)} Done Editing`
-      : `${getSvgIcon('edit', 14)} Edit Mode`;
-
     const leftHtml = `
       <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;font-weight:600;">
         <span><strong style="color:#f8fafc;">Domain B</strong> · Student Ingestion Engine</span>
         <span>·</span>
-        <span style="color:#38bdf8;font-weight:700;">Individual Registration</span>
+        <span style="color:#38bdf8;font-weight:700;">Unified Registration</span>
       </div>
     `;
     const rightHtml = `
       <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-export-students-csv" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;">
+          ${getSvgIcon('download', 14)} Export CSV
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-dl-student-template" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;">
+          ${getSvgIcon('download', 14)} Template (.xlsx)
+        </button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-subpanel-reset-form" style="height:30px !important;font-size:12px;padding:0 12px !important;">Clear Form</button>
-        <button type="button" class="btn btn-sm" id="btn-toggle-student-reg-edit-mode" style="${editBtnStyle}" title="Toggle Master Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
         <button type="button" class="btn btn-primary btn-sm" id="btn-subpanel-save-student" style="height:30px !important;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;border-radius:4px;">
           ${getSvgIcon('user-plus', 14)} Register Student
         </button>
       </div>
     `;
     window.setBottomInfobar(leftHtml, rightHtml);
+    document.getElementById('btn-dl-student-template')?.addEventListener('click', () => {
+      if (typeof XLSX === 'undefined') {
+        showToast('SheetJS is not loaded yet.', 'error');
+        return;
+      }
+      const sampleData = [
+        { 'INSTITUTION': 'CEC', 'PROGRAM': 'Camp', 'BATCH': 'Batch 01', 'NAME': 'Jane Doe', 'GENDER': 'female', 'PIN': '1234' },
+        { 'INSTITUTION': 'CEC', 'PROGRAM': 'Camp', 'BATCH': 'Batch 01', 'NAME': 'John Smith', 'GENDER': 'male', 'PIN': '1234' },
+        { 'INSTITUTION': 'CEC', 'PROGRAM': 'Hospitality', 'BATCH': 'Batch 02', 'NAME': 'Michael Scott', 'GENDER': 'male', 'PIN': '1234' }
+      ];
+      const ws = XLSX.utils.json_to_sheet(sampleData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Student Roster');
+      XLSX.writeFile(wb, 'Template_Students_Registration.xlsx');
+      showToast('Student template downloaded successfully.', 'success');
+    });
+    document.getElementById('btn-export-students-csv')?.addEventListener('click', async () => {
+      if (typeof window.exportStudentsGradebook === 'function') {
+        await window.exportStudentsGradebook();
+      } else {
+        showToast('Exporting student records...', 'info');
+        try {
+          const stds = await adminFetchAll('students', 'name, gender, birth_date, is_active, created_at, programs(name), batches!batch_id(name)');
+          if (!stds || stds.length === 0) { showToast('No students to export.', 'warning'); return; }
+          const exportRows = stds.map(s => ({
+            'Name': s.name,
+            'Gender': s.gender || '',
+            'Program': s.programs?.name || '',
+            'Batch': s.batches?.name || '',
+            'Status': s.is_active ? 'Active' : 'Inactive',
+            'Enrolled': s.created_at ? s.created_at.split('T')[0] : ''
+          }));
+          const ws = XLSX.utils.json_to_sheet(exportRows);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Active Students');
+          XLSX.writeFile(wb, `Students_Export_${new Date().toISOString().slice(0,10)}.xlsx`);
+          showToast('Export complete.', 'success');
+        } catch (err) {
+          showToast('Export failed: ' + err.message, 'error');
+        }
+      }
+    });
     document.getElementById('btn-subpanel-reset-form')?.addEventListener('click', () => {
       document.getElementById('btn-reset-indiv-form')?.click();
-    });
-    document.getElementById('btn-toggle-student-reg-edit-mode')?.addEventListener('click', () => {
-      if (typeof window.toggleGlobalEditMode === 'function') {
-        const newState = window.toggleGlobalEditMode();
-        showToast(newState ? 'Master Edit Mode ON (Inline Excel Grid)' : 'Master Edit Mode OFF', newState ? 'info' : 'success');
-        renderIndividualRegView(container);
-      }
     });
     document.getElementById('btn-subpanel-save-student')?.addEventListener('click', () => {
       document.getElementById('btn-save-indiv-student')?.click();

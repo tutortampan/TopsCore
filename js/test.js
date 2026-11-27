@@ -1215,6 +1215,10 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             // Phrases: 20s spoken / 10s selection / 20s written
             const manualDur = Number(testData?.working_duration_minutes || testData?.payload?.working_duration_minutes || 0);
             const isPhraseSection = sectionKey === 'phrases';
+            const sectionSpecificDur = isPhraseSection
+              ? Number(testData?.payload?.phrases_duration_minutes || testData?.payload?.phrasesDurationMinutes || 0)
+              : Number(testData?.payload?.words_duration_minutes || testData?.payload?.wordsDurationMinutes || 0);
+            const isUnifiedTest = Boolean(hasTwoSections || testData?.payload?.is_unified || testData?.payload?.category === 'unified');
             const sessModes = testData?.payload?.test_session?.answering_modes;
             const sessMode = testData?.payload?.test_session?.answering_mode;
             const curMode = isPhraseSection
@@ -1227,7 +1231,9 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
               pace = (curMode === 'written') ? 15 : 10;
             }
             const autoCalcDur = Math.max(1, Math.ceil((allAnswerRows.length * pace) / 60));
-            const sectionDur = manualDur > 0 ? manualDur : autoCalcDur;
+            const sectionDur = sectionSpecificDur > 0
+              ? sectionSpecificDur
+              : (!isUnifiedTest && manualDur > 0 ? manualDur : autoCalcDur);
             const startedAt = attemptData?.started_at ? new Date(attemptData.started_at) : new Date();
             attemptData.expires_at = new Date(startedAt.getTime() + sectionDur * 60000).toISOString();
             _lastKnownServerExpMs = new Date(attemptData.expires_at).getTime();

@@ -743,10 +743,22 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       });
     }
     if (program) {
+      const filterVal = program.toLowerCase();
+      const matchedProgIds = new Set(
+        (window._vaultMeta?.programs || [])
+          .filter(p => (p.name || '').toLowerCase().includes(filterVal) || (p.code || '').toLowerCase().includes(filterVal))
+          .map(p => p.id)
+      );
+      const assignedThemeKeys = new Set(
+        (window._vaultMeta?.themeAssignments || [])
+          .filter(a => a.is_active !== false && matchedProgIds.has(a.program_id))
+          .map(a => `${String(a.theme_code || '').trim().toUpperCase()}_${parseInt(a.target_level, 10)}`)
+      );
       filtered = filtered.filter(w => {
+        const key = `${String(w.theme_code || '').trim().toUpperCase()}_${parseInt(w.target_level, 10)}`;
+        if (assignedThemeKeys.has(key)) return true;
         const pName = (w.programs?.name || w.program_name || '').toLowerCase();
         const pCode = (w.programs?.code || w.program_code || '').toLowerCase();
-        const filterVal = program.toLowerCase();
         return pName.includes(filterVal) || pCode.includes(filterVal);
       });
     }
@@ -1914,8 +1926,10 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     const tpName = (w.topic || '').trim();
     if (!tpName) return;
     const rawTpCode = (w.topic_code && w.topic_code.trim()) ? w.topic_code.trim() : `${thCode}1`;
-    // Clean topic code: strip leading theme letters so 'A1', 'G1', and '1' all normalize to '1'
-    const cleanTpCode = rawTpCode.replace(/^[A-Za-z]+/, '').trim() || rawTpCode;
+    // Clean topic code: strip leading theme prefix (including hyphenated codes like EVNK-A1 -> 1)
+    const cleanTpCode = (thCode && rawTpCode.toUpperCase().startsWith(thCode))
+      ? (rawTpCode.slice(thCode.length).replace(/^-+/, '').trim() || rawTpCode)
+      : (rawTpCode.replace(/^[A-Za-z-]+/, '').trim() || rawTpCode);
     const normTopicName = tpName.toLowerCase().trim();
 
     // Grouping key: topics sharing level, theme code, clean topic code, and topic name automatically merge
@@ -2255,8 +2269,11 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           : `<span style="color:#64748b;font-size: 12px;">—</span>`;
 
         topics.forEach(tp => {
-          const cleanTopicCode = (tp.topicCode || '1').trim().replace(/^[A-Za-z]+/, '') || (tp.topicCode || '1');
           const cleanThemeCode = (thCode || 'A').trim().toUpperCase();
+          const rawTp = (tp.topicCode || '1').trim();
+          const cleanTopicCode = (cleanThemeCode && rawTp.toUpperCase().startsWith(cleanThemeCode))
+            ? (rawTp.slice(cleanThemeCode.length).replace(/^-+/, '').trim() || rawTp)
+            : (rawTp.replace(/^[A-Za-z-]+/, '').trim() || rawTp);
           const lvlPrefix = (lvl === 0) ? '' : String(lvl);
           const compositeCode = `${lvlPrefix}${cleanThemeCode}${cleanTopicCode}`;
 
@@ -2270,7 +2287,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               <!-- 2. TH-CD -->
               <td class="editable-cell" style="text-align: center; color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#a5b4fc'}; font-family: monospace; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span class="vault-cell-view">${escapeHtml(thCode)}</span>
-                <input type="text" maxlength="4" class="vault-edit-input" data-action="edit-theme-code" data-old-th-code="${thCode}" data-lvl="${lvl}" value="${escapeHtml(thCode)}" style="text-align:center; text-transform:uppercase;">
+                <input type="text" maxlength="12" class="vault-edit-input" data-action="edit-theme-code" data-old-th-code="${thCode}" data-lvl="${lvl}" value="${escapeHtml(thCode)}" style="text-align:center; text-transform:uppercase;">
               </td>
               <!-- 3. THEME -->
               <td class="editable-cell" style="color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#ffffff'}; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
@@ -2562,7 +2579,12 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             if (newVal === oldTheme) return;
 
             // Cascade DB update targeting composite (theme_code, level)
-            await updateVaultThemeCascade(oldTheme, newVal, lvl, thCode);
+            showLoading('Renaming theme...');
+            try {
+              await updateVaultThemeCascade(oldTheme, newVal, lvl, thCode);
+            } finally {
+              hideLoading();
+            }
 
             // Synchronize all rows belonging to the same theme and level in the DOM
             const allThemeRows = tbody.querySelectorAll(`tr[data-theme-code="${thCode}"][data-level="${lvl}"]`);
@@ -2595,7 +2617,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           } else if (action === 'edit-theme-code') {
             const oldCode = String(input.dataset.oldThCode || '').trim().toUpperCase();
             const lvl = parseInt(input.dataset.lvl, 10);
-            const cleanNewCode = newVal.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const cleanNewCode = newVal.toUpperCase().replace(/[^A-Z0-9-]/g, '');
             if (!cleanNewCode || cleanNewCode === oldCode) {
               input.value = oldCode;
               return;
@@ -2611,7 +2633,28 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               }
             }
 
-            await updateVaultThemeCodeCascade(oldCode, cleanNewCode, lvl);
+            showLoading('Updating theme code...');
+            try {
+              await updateVaultThemeCodeCascade(oldCode, cleanNewCode, lvl);
+            } finally {
+              hideLoading();
+            }
+
+            // Sync in-memory theme assignments & assignSet so filtered programs (e.g. Evnikom) never disappear
+            allOrderedProgs.forEach(p => {
+              const oldKey = `${oldCode}_${lvl}_${p.id}`;
+              if (assignSet.has(oldKey)) {
+                assignSet.delete(oldKey);
+                assignSet.add(`${cleanNewCode}_${lvl}_${p.id}`);
+              }
+            });
+            if (Array.isArray(meta?.themeAssignments)) {
+              meta.themeAssignments.forEach(a => {
+                if (String(a.theme_code || '').trim().toUpperCase() === oldCode && parseInt(a.target_level, 10) === lvl) {
+                  a.theme_code = cleanNewCode;
+                }
+              });
+            }
 
             // Update all rows with old theme code in this level
             const allCodeRows = tbody.querySelectorAll(`tr[data-theme-code="${oldCode}"][data-level="${lvl}"]`);
@@ -2635,10 +2678,11 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               const assignBtn = row.querySelector('.btn-assign-pill');
               if (assignBtn) assignBtn.setAttribute('data-theme-code', cleanNewCode);
 
-              // Recalculate composite code column
+              // Recalculate composite code column (omit '0' for Level 0)
               const tpCodeInput = row.querySelector('[data-action="edit-topic-code"]');
               const currentTpCode = tpCodeInput ? tpCodeInput.value.trim() : '1';
-              const newComp = `${lvl}${cleanNewCode}${currentTpCode}`;
+              const lvlPrefix = (lvl === 0) ? '' : String(lvl);
+              const newComp = `${lvlPrefix}${cleanNewCode}${currentTpCode}`;
               const compTd = row.querySelector('.col-theme-composite-code');
               if (compTd) compTd.textContent = newComp;
             });
@@ -2647,6 +2691,9 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             words.forEach(w => {
               if (String(w.theme_code).toUpperCase() === oldCode && parseInt(w.target_level, 10) === lvl) {
                 w.theme_code = cleanNewCode;
+                if (w.topic_code && w.topic_code.startsWith(oldCode)) {
+                  w.topic_code = cleanNewCode + w.topic_code.slice(oldCode.length);
+                }
               }
             });
             showToast(`Theme Code updated to "${cleanNewCode}"`, 'success');
@@ -2693,8 +2740,9 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             input.value = cleanTp;
             if (viewSpan) viewSpan.textContent = cleanTp;
 
-            // Recalculate column 6 CODE in this row
-            const newComp = `${lvl}${thCode}${cleanTp}`;
+            // Recalculate column 6 CODE in this row (omit '0' for Level 0)
+            const lvlPrefix = (lvl === 0) ? '' : String(lvl);
+            const newComp = `${lvlPrefix}${thCode}${cleanTp}`;
             const compTd = tr?.querySelector('.col-theme-composite-code');
             if (compTd) compTd.textContent = newComp;
 
@@ -2724,7 +2772,28 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             const thCode = String(input.dataset.thCode || '').trim().toUpperCase();
 
             // Cascade theme level across vocabulary_vault and theme_program_assignments
-            await updateVaultThemeLevelCascade(thCode, oldLvl, newLvl);
+            showLoading('Updating theme level...');
+            try {
+              await updateVaultThemeLevelCascade(thCode, oldLvl, newLvl);
+            } finally {
+              hideLoading();
+            }
+
+            // Sync in-memory theme assignments & assignSet
+            allOrderedProgs.forEach(p => {
+              const oldKey = `${thCode}_${oldLvl}_${p.id}`;
+              if (assignSet.has(oldKey)) {
+                assignSet.delete(oldKey);
+                assignSet.add(`${thCode}_${newLvl}_${p.id}`);
+              }
+            });
+            if (Array.isArray(meta?.themeAssignments)) {
+              meta.themeAssignments.forEach(a => {
+                if (String(a.theme_code || '').trim().toUpperCase() === thCode && parseInt(a.target_level, 10) === oldLvl) {
+                  a.target_level = newLvl;
+                }
+              });
+            }
 
             // Synchronize all rows belonging to the same theme and level in the DOM
             const allThemeRows = tbody.querySelectorAll(`tr[data-theme-code="${thCode}"][data-level="${oldLvl}"]`);
@@ -2754,9 +2823,10 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               const assignBtn = row.querySelector('.btn-assign-pill');
               if (assignBtn) assignBtn.setAttribute('data-level', newLvl);
 
-              // Recalculate column 6 CODE in this row
+              // Recalculate column 6 CODE in this row (omit '0' for Level 0)
               const currentTpCode = row.querySelector('[data-action="edit-topic-code"]')?.value.trim() || '1';
-              const newComp = `${newLvl}${thCode}${currentTpCode}`;
+              const newLvlPrefix = (newLvl === 0) ? '' : String(newLvl);
+              const newComp = `${newLvlPrefix}${thCode}${currentTpCode}`;
               const compTd = row.querySelector('.col-theme-composite-code');
               if (compTd) compTd.textContent = newComp;
             });
@@ -3047,7 +3117,9 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   const findTaskForTopic = (lvl, thCode, tpCode, tpName, classId) => {
     if (!classId) return null;
     const classTests = tests.filter(t => t.class_id === classId);
-    const cleanNum = tpCode.replace(/^[A-Z]+/i, '');
+    const cleanNum = (thCode && tpCode.toUpperCase().startsWith(String(thCode).toUpperCase()))
+      ? (tpCode.slice(String(thCode).length).replace(/^-+/, '') || tpCode)
+      : tpCode.replace(/^[A-Z-]+/i, '');
     const codeWithLvl = `${lvl}${thCode}${cleanNum}`;
     const codeBare = `${thCode}${cleanNum}`;
     return classTests.find(t => (t.test_type === 'quiz' || (t.shell_code && t.shell_code.includes('TASK'))) &&
@@ -3199,8 +3271,11 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
         topics.forEach(tp => {
           renderedCount++;
-          const cleanTopicNum = String(tp.topicCode || '1').trim().replace(/^[A-Za-z]+/, '') || String(tp.topicCode || '1');
           const cleanThemeCode = String(thCode || th.code || 'A').trim().toUpperCase();
+          const rawTp = String(tp.topicCode || '1').trim();
+          const cleanTopicNum = (cleanThemeCode && rawTp.toUpperCase().startsWith(cleanThemeCode))
+            ? (rawTp.slice(cleanThemeCode.length).replace(/^-+/, '').trim() || rawTp)
+            : (rawTp.replace(/^[A-Za-z-]+/, '').trim() || rawTp);
           // SSOT §2.4.2 & §2.6: Zero-Level Omission Invariant (omit '0' for level 0)
           const compositeCode = (lvl === 0) ? `${cleanThemeCode}${cleanTopicNum}` : `${lvl}${cleanThemeCode}${cleanTopicNum}`;
           const lvlDisplay = (lvl === 0) ? '—' : lvlLabel;

@@ -407,7 +407,7 @@ import { renderResults } from './class.js?v=20261116_v572';
 import { renderTests } from './tests-management.js?v=20261121_v665';
 import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261123_v678';
 import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261113_v450';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261125_v686';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261127_v694';
 import { renderModules } from './modules.js?v=20261106_v160';
 import { renderAuditLog, renderSettings, renderInterfaceSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261121_v665';
 import { renderSystemArchitecture } from './system-architecture.js?v=20261121_v656';
@@ -421,7 +421,7 @@ import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
 import { renderClassesHub } from './classes-hub.js?v=20261127_v693';
 import { renderDashboard } from './admin-deck.js?v=20261121_v655';
 import { openStudentFullEdit } from './student-management.js?v=20261123_v677';
-import { renderStudentsRegistration } from './student-registration.js?v=20261120_v640';
+import { renderStudentsRegistration } from './student-registration.js?v=20261127_v701';
 import { renderAcademicGradebook } from './academic-gradebook.js?v=20261123_v678';
 
 if (typeof window !== 'undefined') {
@@ -1798,14 +1798,39 @@ if (typeof window !== 'undefined') {
             phrasesCount = 0;
           }
 
-          // Real-time dynamic duration calculation (SSOT DECISION-062):
-          // Prioritizes tutor's manual working_duration_minutes, otherwise calculates from 10s/word & 20s/phrase
+          // Real-time dynamic per-category & cumulative duration calculation (SSOT DECISION-062/063):
+          const wordsPace = isExamTest ? parsedClassSettings?.wordsExamPace : parsedClassSettings?.wordsTaskPace;
+          const phrasesPace = isExamTest ? parsedClassSettings?.phrasesExamPace : parsedClassSettings?.phrasesTaskPace;
+
+          const savedWordsDur = Number(r?.payload?.words_duration_minutes || r?.payload?.wordsDurationMinutes || 0);
+          const savedPhrasesDur = Number(r?.payload?.phrases_duration_minutes || r?.payload?.phrasesDurationMinutes || 0);
           const manualDur = Number(r?.working_duration_minutes || r?.payload?.working_duration_minutes || r?.time_limit_minutes || 0);
-          const timeLimit = manualDur > 0
-            ? manualDur
-            : (effectiveQCount > 0
-                ? calculateAutoDurationMinutes(effectiveQCount, rawAns, category)
-                : Math.floor((r?.time_limit_seconds || 3600) / 60));
+
+          let wordsTimeLimit = 0;
+          let phrasesTimeLimit = 0;
+          if (isVocab && wordsCount > 0) {
+            wordsTimeLimit = savedWordsDur > 0
+              ? savedWordsDur
+              : calculateAutoDurationMinutes(wordsCount, rawWordsAns, 'words', wordsPace);
+          }
+          if (isVocab && phrasesCount > 0) {
+            phrasesTimeLimit = savedPhrasesDur > 0
+              ? savedPhrasesDur
+              : calculateAutoDurationMinutes(phrasesCount, rawPhrasesAns, 'phrases', phrasesPace);
+          }
+
+          let timeLimit = 0;
+          if (isVocab && isUnified && wordsCount > 0 && phrasesCount > 0) {
+            timeLimit = wordsTimeLimit + phrasesTimeLimit;
+          } else {
+            timeLimit = manualDur > 0
+              ? manualDur
+              : (effectiveQCount > 0
+                  ? calculateAutoDurationMinutes(effectiveQCount, rawAns, category)
+                  : Math.floor((r?.time_limit_seconds || 3600) / 60));
+            if (isVocab && wordsCount > 0 && phrasesCount === 0) wordsTimeLimit = timeLimit;
+            if (isVocab && phrasesCount > 0 && wordsCount === 0) phrasesTimeLimit = timeLimit;
+          }
 
           return {
             id: r?.id || '',
@@ -1824,6 +1849,8 @@ if (typeof window !== 'undefined') {
             isVocab,
             wordsCount,
             phrasesCount,
+            wordsTimeLimit,
+            phrasesTimeLimit,
             timeLimit,
             minScore,
             qCount: _isDyn ? _vaultQ : qCount,
@@ -2689,6 +2716,16 @@ if (typeof window !== 'undefined') {
             });
           }
         } else if (window._classHubActiveTab === 'tests') {
+          const formatDur = (m) => {
+            const mins = Number(m || 0);
+            if (mins >= 60) {
+              const h = Math.floor(mins / 60);
+              const rem = mins % 60;
+              return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+            }
+            return `${mins} min`;
+          };
+
           const classAsmGrid = new window.DataGrid({
             container: document.getElementById('class-tests-grid'),
             tableId: 'class-tests-table',
@@ -2799,14 +2836,6 @@ if (typeof window !== 'undefined') {
                 }
               },
               {
-                key: 'timeLimit',
-                label: 'DURATION',
-                sortable: true,
-                width: '85px',
-                align: 'center',
-                render: (val, row) => `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500; font-variant-numeric:tabular-nums;">${row.timeLimit || 60} min</span>`
-              },
-              {
                 key: 'minScore',
                 label: 'PASS RATE',
                 sortable: true,
@@ -2884,6 +2913,20 @@ if (typeof window !== 'undefined') {
                 }
               },
               {
+                key: 'wordsTimeLimit',
+                label: 'W-TIME',
+                sortable: true,
+                width: '75px',
+                align: 'center',
+                render: (val, row) => {
+                  if (row.isVocab === false || !row.wordsTimeLimit || row.wordsTimeLimit <= 0) {
+                    return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                  }
+                  const mins = Number(row.wordsTimeLimit);
+                  return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:600; font-variant-numeric:tabular-nums;" title="Word Category Duration (${mins} min)">${formatDur(mins)}</span>`;
+                }
+              },
+              {
                 key: 'phrasesCount',
                 label: 'PHRASES',
                 shortLabel: 'PHR',
@@ -2907,6 +2950,31 @@ if (typeof window !== 'undefined') {
                   const mode = String(row.phrasesAnswerType || '—');
                   if (mode === '—') return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
                   return `<span class="fw-500" style="font-size:12px; color:var(--clr-text-1); white-space:nowrap;">${escapeHtml(mode)}</span>`;
+                }
+              },
+              {
+                key: 'phrasesTimeLimit',
+                label: 'P-TIME',
+                sortable: true,
+                width: '75px',
+                align: 'center',
+                render: (val, row) => {
+                  if (row.isVocab === false || !row.phrasesTimeLimit || row.phrasesTimeLimit <= 0) {
+                    return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                  }
+                  const mins = Number(row.phrasesTimeLimit);
+                  return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:600; font-variant-numeric:tabular-nums;" title="Phrase Category Duration (${mins} min)">${formatDur(mins)}</span>`;
+                }
+              },
+              {
+                key: 'timeLimit',
+                label: 'DURATION',
+                sortable: true,
+                width: '85px',
+                align: 'center',
+                render: (val, row) => {
+                  const mins = Number(row.timeLimit || 60);
+                  return `<span style="font-size:12px; color:var(--clr-text-1, #f8fafc); white-space:nowrap; font-weight:700; font-variant-numeric:tabular-nums;" title="Cumulative Duration (${mins} min)">${formatDur(mins)}</span>`;
                 }
               },
               {
@@ -4945,8 +5013,13 @@ if (typeof window !== 'undefined') {
                         `;
                       }
 
+                      const pct = maxTopicReps > 0 ? Math.round((earned / maxTopicReps) * 100) : 0;
                       const isComplete = earned >= maxTopicReps && maxTopicReps > 0;
-                      const color = isComplete ? 'var(--grade-a)' : (earned > 0 ? '#38bdf8' : '#64748b');
+                      const color = earned === 0
+                        ? '#64748b'
+                        : (typeof getGradeColorByScore === 'function'
+                            ? getGradeColorByScore(pct)
+                            : (isComplete ? 'var(--grade-a)' : (pct >= 60 ? 'var(--grade-c)' : 'var(--grade-e)')));
                       return `
                         <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
                              onclick="event.stopPropagation(); window.switchClassAttendanceTopic('${topCode}');"
@@ -6211,10 +6284,21 @@ if (typeof window !== 'undefined') {
                       }
                     });
                     if (totalStudents > 0 && repsSum > 0) {
-                      const avgReps = (repsSum / totalStudents).toFixed(1).replace(/\.0$/, '');
+                      const avgNum = repsSum / totalStudents;
+                      const avgReps = avgNum.toFixed(1).replace(/\.0$/, '');
+                      const asmsInTheme = themeGroups[tc] || [];
+                      const matchingTasks = asmsInTheme.filter(a => !isWeeklyExam(a) && (
+                        String(a.payload?.topic_code || '').toUpperCase() === topCode.toUpperCase() ||
+                        (a.shell_code && a.shell_code.includes(topCode))
+                      ));
+                      const maxTopicReps = checkTopicHasPhrases(matchingTasks) ? (compTargetReps * 2) : compTargetReps;
+                      const avgPct = maxTopicReps > 0 ? Math.round((avgNum / maxTopicReps) * 100) : 0;
+                      const avgColor = typeof getGradeColorByScore === 'function'
+                        ? getGradeColorByScore(avgPct)
+                        : (avgPct >= 90 ? 'var(--grade-a)' : (avgPct >= 60 ? 'var(--grade-c)' : 'var(--grade-e)'));
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:#38bdf8; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Topic ${topCode} Reps: ${avgReps}">${avgReps}</span>
+                          <span style="color:${avgColor}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Topic ${topCode} Reps: ${avgReps}/${maxTopicReps} (${avgPct}%)">${avgReps}</span>
                         </td>
                       `;
                     } else {

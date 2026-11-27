@@ -7390,12 +7390,12 @@ function buildFullEditModal() {
   modal.className = 'modal-backdrop hidden';
   modal.style.zIndex = '9999';
   modal.innerHTML = `
-    <div class="modal-box" style="max-width:640px;width:95%;max-height:90vh;overflow-y:auto;background:#0f172a;border:1px solid var(--clr-border);border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
-      <div class="modal-header" style="display:flex;justify-content:center;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--clr-border);text-align:center;">
+    <div class="modal-box" style="max-width:1120px;width:95vw;max-height:90vh;overflow-y:auto;background:#0f172a;border:1px solid var(--clr-border);border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
+      <div class="modal-header" style="display:flex;justify-content:center;align-items:center;padding:0.9rem 1.25rem;border-bottom:1px solid var(--clr-border);text-align:center;">
         <h3 id="bfe-title" style="margin:0 auto;font-size: 16px;font-weight:800;color:var(--clr-text-1);text-align:center;">Edit Student</h3>
       </div>
-      <div id="bfe-body" style="padding:1.5rem;"></div>
-      <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-top:1px solid var(--clr-border);">
+      <div id="bfe-body" style="padding:1.25rem;"></div>
+      <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;padding:0.85rem 1.25rem;border-top:1px solid var(--clr-border);">
         <button class="btn btn-secondary btn-modal-close-left" id="bfe-cancel">CLOSE</button>
         <button class="btn btn-primary" id="bfe-save">Save Changes</button>
       </div>
@@ -7527,9 +7527,9 @@ export async function openStudentFullEdit(student, onSaved) {
   }).join('');
 
   body.innerHTML = `
-    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+    <div style="display:flex;gap:1.25rem;align-items:flex-start;flex-wrap:wrap;">
       <!-- 3:4 Avatar Center-Crop Upload (Left) -->
-      <div style="flex:1;min-width:140px;max-width:180px;text-align:center;">
+      <div style="flex:0 0 150px;text-align:center;">
         <label class="form-label" style="display:block;margin-bottom:0.5rem;font-size: 12px;text-transform:uppercase;color:var(--clr-text-3);">3:4 Avatar</label>
         <div style="width:120px;height:160px;margin:0 auto;border-radius:8px;overflow:hidden;border:2px solid var(--clr-border);background:rgba(0,0,0,0.25);position:relative;">
           <img id="bfe-avatar-preview" src="${getBustedAvatarUrl(currentPhotoUrl)}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;" />
@@ -7537,23 +7537,23 @@ export async function openStudentFullEdit(student, onSaved) {
             <div class="spinner" style="width:20px;height:20px;"></div>
           </div>
         </div>
-        <div style="margin-top:0.75rem;">
+        <div style="margin-top:0.65rem;">
           <label for="bfe-avatar-file" class="btn btn-secondary btn-xs" style="cursor:pointer;font-size: 12px;display:inline-flex;align-items:center;gap:4px;">
             ${getSvgIcon('camera', 14)} Upload (3:4)
           </label>
           <input type="file" id="bfe-avatar-file" accept="image/*" style="display:none;" />
-          <div class="text-xs text-muted mt-1" style="font-size: 12px;">240x320 WebP &bull; 35% Top Bias</div>
+          <div class="text-xs text-muted mt-1" style="font-size: 11px;line-height:1.3;">240x320 WebP &bull; 35% Top Bias</div>
         </div>
       </div>
 
       <!-- Main Fields (Right) -->
-      <div style="flex:2.5;min-width:260px;display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-        <div class="form-group" style="grid-column:1/-1;">
+      <div style="flex:1;min-width:300px;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:0.75rem 1rem;">
+        <div class="form-group mb-0" style="grid-column:span 2;">
           <label class="form-label">Full Name *</label>
           <input class="form-control" id="bfe-name" value="${escHtml(initialName)}" placeholder="e.g. Johnathan Doe">
         </div>
 
-        <div class="form-group">
+        <div class="form-group mb-0">
           <label class="form-label">Honorific &amp; Gender</label>
           <select class="form-control" id="bfe-gender">
             <option value="">-- Unassigned --</option>
@@ -7562,64 +7562,68 @@ export async function openStudentFullEdit(student, onSaved) {
           </select>
         </div>
 
-        <div class="form-group">
+        <div class="form-group mb-0">
           <label class="form-label">Birthplace (Tempat Lahir)</label>
           <input class="form-control" id="bfe-birthplace" value="${escHtml(initialBirthplace)}" placeholder="e.g. Praya, Mataram">
         </div>
 
-        <div class="form-group">
+        <div class="form-group mb-0">
           <label class="form-label">Date of Birth <span style="color:var(--grade-e);font-weight:800;" title="Required">*</span></label>
           <input type="date" class="form-control" id="bfe-birth" value="${escHtml(initialBirth)}" required>
-          <div style="font-size: 12px;color:#94a3b8;margin-top:3px;">Required — used to calculate student age in the roster.</div>
+          <div style="font-size: 11px;color:#94a3b8;margin-top:2px;line-height:1.25;">Required — used to calculate student age in the roster.</div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Province</label>
-          <select class="form-control" id="bfe-province">
-            ${bfeProvOptions}
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Regency</label>
-          <select class="form-control" id="bfe-city">
-            ${bfeCityOptions}
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">District (Kecamatan)</label>
-          <select class="form-control" id="bfe-district">
-            ${bfeDistOptions}
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Village (Desa / Kelurahan)</label>
-          <select class="form-control" id="bfe-village">
-            ${bfeVillOptions}
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Assigned Batch</label>
-          <select class="form-control" id="bfe-batch">
-            <option value="">-- No Batch Assigned --</option>
-            ${batches.map(b => `<option value="${b.id}" ${b.id === initialBatchId ? 'selected' : ''}>${escHtml(b.name)}</option>`).join('')}
-          </select>
-        </div>
-
-        <div class="form-group">
+        <div class="form-group mb-0">
           <label class="form-label">Personal PIN (Reset)</label>
           <input type="text" class="form-control" id="bfe-pin" value="${escHtml(initialPin)}" placeholder="Leave blank to keep unchanged" autocomplete="new-password">
         </div>
 
-        <div class="form-group" style="grid-column:1/-1;">
-          <label class="form-label">Account Status</label>
-          <select class="form-control" id="bfe-active">
-            <option value="true"  ${initialActive ? 'selected' : ''}>Active</option>
-            <option value="false" ${!initialActive  ? 'selected' : ''}>Inactive / Suspended</option>
-          </select>
+        <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:0.75rem;">
+          <div class="form-group mb-0">
+            <label class="form-label">Province</label>
+            <select class="form-control" id="bfe-province">
+              ${bfeProvOptions}
+            </select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label">Regency</label>
+            <select class="form-control" id="bfe-city">
+              ${bfeCityOptions}
+            </select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label">District (Kecamatan)</label>
+            <select class="form-control" id="bfe-district">
+              ${bfeDistOptions}
+            </select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label">Village (Desa / Kelurahan)</label>
+            <select class="form-control" id="bfe-village">
+              ${bfeVillOptions}
+            </select>
+          </div>
+        </div>
+
+        <div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:1rem;">
+          <div class="form-group mb-0">
+            <label class="form-label">Assigned Batch</label>
+            <select class="form-control" id="bfe-batch">
+              <option value="">-- No Batch Assigned --</option>
+              ${batches.map(b => `<option value="${b.id}" ${b.id === initialBatchId ? 'selected' : ''}>${escHtml(b.name)}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="form-label">Account Status</label>
+            <select class="form-control" id="bfe-active">
+              <option value="true"  ${initialActive ? 'selected' : ''}>Active</option>
+              <option value="false" ${!initialActive  ? 'selected' : ''}>Inactive / Suspended</option>
+            </select>
+          </div>
         </div>
 
         ${(() => {
@@ -7629,15 +7633,16 @@ export async function openStudentFullEdit(student, onSaved) {
             options += '<option value="' + lvl.id + '" ' + (lvl.id === initialLevelId ? 'selected' : '') + '>' + escHtml(lvl.name) + '</option>';
           });
           return `
-            <div style="grid-column:1/-1; margin-top:0.5rem; border-top:1px solid var(--clr-border); padding-top:1rem;">
-              <h4 style="margin:0 0 0.75rem 0; font-size: 16px; display:flex; justify-content:space-between; align-items:center;">
-                <span>${getSvgIcon('trending-up', 14)} Manual Level Assignment</span>
-                <span class="badge badge-neutral" style="font-weight:normal;">Applies instantly upon save</span>
-              </h4>
-              <div style="background:rgba(0,0,0,0.1); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
-                <div class="form-group mb-0">
-                  <label class="form-label">Student's Current Level</label>
-                  <select class="form-control" id="bfe-level">
+            <div style="grid-column:1/-1; margin-top:0.25rem; border-top:1px solid var(--clr-border); padding-top:0.75rem;">
+              <div style="background:rgba(0,0,0,0.1); padding:0.75rem 1rem; border-radius:8px; border:1px solid var(--clr-border); display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+                  <h4 style="margin:0; font-size: 14px; display:inline-flex; align-items:center; gap:6px;">
+                    <span>${getSvgIcon('trending-up', 14)} Manual Level Assignment</span>
+                  </h4>
+                  <span class="badge badge-neutral" style="font-weight:normal;">Applies instantly upon save</span>
+                </div>
+                <div class="form-group mb-0" style="min-width:240px;flex:1;max-width:340px;">
+                  <select class="form-control" id="bfe-level" aria-label="Student's Current Level">
                     ${options}
                   </select>
                 </div>

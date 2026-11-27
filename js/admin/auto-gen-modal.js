@@ -853,9 +853,7 @@ export async function openVocabularySystemModal(options = {}) {
                       <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
                     </div>
                     <div style="display:flex; gap:5px;">
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-lime ${(s.wordsTaskPace || 15) === 10 ? 'active' : ''}" data-target="wiz-words-task-pace" data-val="10">10s</button>
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-lime ${(s.wordsTaskPace || 15) === 15 ? 'active' : ''}" data-target="wiz-words-task-pace" data-val="15">15s</button>
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-lime ${(s.wordsTaskPace || 15) === 20 ? 'active' : ''}" data-target="wiz-words-task-pace" data-val="20">20s</button>
+                      ${[10, 15, 20, 25, 30].map(v => `<button type="button" class="wiz-preset-pill-mini wiz-preset-pill-lime ${(s.wordsTaskPace || 15) === v ? 'active' : ''}" data-target="wiz-words-task-pace" data-val="${v}">${v}s</button>`).join('')}
                     </div>
                   </div>
                 </div>
@@ -903,9 +901,7 @@ export async function openVocabularySystemModal(options = {}) {
                       <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
                     </div>
                     <div style="display:flex; gap:5px;">
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesTaskPace || 20) === 15 ? 'active' : ''}" data-target="wiz-phrases-task-pace" data-val="15" ${!activeClass.hasPhrases ? 'disabled' : ''}>15s</button>
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesTaskPace || 20) === 20 ? 'active' : ''}" data-target="wiz-phrases-task-pace" data-val="20" ${!activeClass.hasPhrases ? 'disabled' : ''}>20s</button>
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesTaskPace || 20) === 30 ? 'active' : ''}" data-target="wiz-phrases-task-pace" data-val="30" ${!activeClass.hasPhrases ? 'disabled' : ''}>30s</button>
+                      ${[10, 15, 20, 25, 30].map(v => `<button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesTaskPace || 20) === v ? 'active' : ''}" data-target="wiz-phrases-task-pace" data-val="${v}" ${!activeClass.hasPhrases ? 'disabled' : ''}>${v}s</button>`).join('')}
                     </div>
                   </div>
                 </div>
@@ -1003,9 +999,7 @@ export async function openVocabularySystemModal(options = {}) {
                       <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
                     </div>
                     <div style="display:flex; gap:5px;">
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-pink ${(s.wordsExamPace || 15) === 15 ? 'active' : ''}" data-target="wiz-words-exam-pace" data-val="15">15s</button>
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-pink ${(s.wordsExamPace || 15) === 20 ? 'active' : ''}" data-target="wiz-words-exam-pace" data-val="20">20s</button>
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-pink ${(s.wordsExamPace || 15) === 30 ? 'active' : ''}" data-target="wiz-words-exam-pace" data-val="30">30s</button>
+                      ${[10, 15, 20, 25, 30].map(v => `<button type="button" class="wiz-preset-pill-mini wiz-preset-pill-pink ${(s.wordsExamPace || 15) === v ? 'active' : ''}" data-target="wiz-words-exam-pace" data-val="${v}">${v}s</button>`).join('')}
                     </div>
                   </div>
                 </div>
@@ -1053,9 +1047,7 @@ export async function openVocabularySystemModal(options = {}) {
                       <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
                     </div>
                     <div style="display:flex; gap:5px;">
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesExamPace || 20) === 15 ? 'active' : ''}" data-target="wiz-phrases-exam-pace" data-val="15" ${!activeClass.hasPhrases ? 'disabled' : ''}>15s</button>
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesExamPace || 20) === 20 ? 'active' : ''}" data-target="wiz-phrases-exam-pace" data-val="20" ${!activeClass.hasPhrases ? 'disabled' : ''}>20s</button>
-                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesExamPace || 20) === 30 ? 'active' : ''}" data-target="wiz-phrases-exam-pace" data-val="30" ${!activeClass.hasPhrases ? 'disabled' : ''}>30s</button>
+                      ${[10, 15, 20, 25, 30].map(v => `<button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesExamPace || 20) === v ? 'active' : ''}" data-target="wiz-phrases-exam-pace" data-val="${v}" ${!activeClass.hasPhrases ? 'disabled' : ''}>${v}s</button>`).join('')}
                     </div>
                   </div>
                 </div>

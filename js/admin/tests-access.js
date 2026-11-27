@@ -284,6 +284,8 @@ export function buildClassThemesData(classTests = [], context = {}, selectedBatc
 
       themeObj.eligibleNormalCount = eligibleNormalCount;
       themeObj.eligibleRemedialCount = eligibleRemedialCount;
+      themeObj.normalEvals = normalEvals;
+      themeObj.remedialEvals = remedialEvals;
       themeObj.batchTotalStudents = activeBatchStudents.length;
 
       return themeObj;
@@ -377,6 +379,7 @@ export function buildClassThemesData(classTests = [], context = {}, selectedBatc
         mode: 'normal'
       });
       themeObj.eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
+      themeObj.normalEvals = normalEvals;
 
       const remedialEvals = evaluateStudentsEligibility({
         students: activeBatchStudents,
@@ -390,6 +393,7 @@ export function buildClassThemesData(classTests = [], context = {}, selectedBatc
         mode: 'remedial'
       });
       themeObj.eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
+      themeObj.remedialEvals = remedialEvals;
       themeObj.batchTotalStudents = activeBatchStudents.length;
 
       return themeObj;
@@ -574,6 +578,132 @@ function renderClassRosterAttendanceTable(activeBatchStudents, sessionAttendance
               <th style="padding: 6px 8px; text-align: center; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">ATTENDANCE STATUS</th>
               <th style="width: 150px; padding: 6px 8px; text-align: center; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">EXAM PROGRESS</th>
               <th style="width: 140px; padding: 6px 8px; text-align: right; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">DISCIPLINE FINE</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renders Lower Right Table: Exam Eligibility Monitor (Directly below Exam Session card)
+ */
+function renderExamEligibleStudentsTable(activeTheme, activeBatchStudents, themesData = [], context = {}) {
+  const { allAttempts = [] } = context;
+  const normalEvals = activeTheme?.normalEvals || [];
+  const remedialEvals = activeTheme?.remedialEvals || [];
+  const remById = new Map(remedialEvals.map(e => [e.student?.id, e]));
+
+  const examThemes = (themesData || []).filter(t => t.examTest || t.wordsTest || t.phrasesTest);
+
+  const getStudentThemeExamScore = (studentId, th) => {
+    const getBestForTest = (testId) => {
+      if (!testId) return null;
+      const atts = allAttempts.filter(a => a.student_id === studentId && a.test_id === testId && !a.deleted_at);
+      if (atts.length === 0) return null;
+      return Math.max(...atts.map(a => Number(a.effective_score ?? a.percentage ?? 0)));
+    };
+    if (th.examTest) {
+      const pct = getBestForTest(th.examTest.id);
+      return pct !== null ? Math.round(pct) : null;
+    }
+    const wPct = getBestForTest(th.wordsTest?.id);
+    const pPct = getBestForTest(th.phrasesTest?.id);
+    if (wPct !== null && pPct !== null) return Math.round((wPct + pPct) / 2);
+    if (wPct !== null) return Math.round(wPct);
+    if (pPct !== null) return Math.round(pPct);
+    return null;
+  };
+
+  const items = (activeBatchStudents || []).map(student => {
+    const nEval = normalEvals.find(e => e.student?.id === student.id);
+    const rEval = remById.get(student.id);
+    const isNormal = Boolean(nEval?.isEligible);
+    const isRemedial = !isNormal && Boolean(rEval?.isEligible);
+    const rank = isNormal ? 0 : (isRemedial ? 1 : 2);
+    const badgeLabel = isNormal ? 'ELIGIBLE' : (isRemedial ? 'REMEDIAL' : (nEval?.statusType === 'success' ? 'PASSED' : 'NOT READY'));
+    const badgeColor = isNormal
+      ? 'var(--grade-a, #00c000)'
+      : (isRemedial ? 'var(--grade-c, #ffff00)' : (nEval?.statusType === 'success' ? '#38bdf8' : 'var(--grade-e, #ff0000)'));
+    const detail = isNormal
+      ? 'Ready for Exam'
+      : (isRemedial ? (rEval?.statusLabel || 'Eligible for Remedial') : (nEval?.statusLabel || 'Prerequisites Incomplete'));
+    let detailColor = '#64748b';
+    if (isNormal || nEval?.statusType === 'success') {
+      detailColor = 'var(--grade-a, #00c000)';
+    } else if (isRemedial) {
+      detailColor = 'var(--grade-c, #ffff00)';
+    } else {
+      const taskMatch = String(detail).match(/\((\d+)\s*\/\s*(\d+)\)/);
+      if (taskMatch) {
+        const done = Number(taskMatch[1]);
+        const tot = Number(taskMatch[2]);
+        detailColor = (tot > 0 && done >= tot) ? 'var(--grade-a, #00c000)' : (done > 0 ? '#38bdf8' : '#64748b');
+      }
+    }
+    const examScores = examThemes.map(th => getStudentThemeExamScore(student.id, th));
+    return { student, rank, badgeLabel, badgeColor, detail, detailColor, examScores };
+  }).sort((a, b) => a.rank - b.rank || String(a.student.name || '').localeCompare(String(b.student.name || '')));
+
+  const eligibleTotal = items.filter(i => i.rank < 2).length;
+  const examHeadersHtml = examThemes.map((th, i) => {
+    const exTitle = th.examTest?.title || `${th.code} - ${th.name}`;
+    const isActiveCol = activeTheme && th.code === activeTheme.code;
+    const hdrColor = isActiveCol ? '#ff2d87' : '#38bdf8';
+    return `<th style="min-width: 78px; padding: 6px 6px; text-align: center; color: ${hdrColor}; position: sticky; top: 0; background: #1e293b; z-index: 5; white-space: nowrap;" title="${escapeHtml(exTitle)}">EX-${i + 1}</th>`;
+  }).join('');
+
+  const totalCols = 3 + examThemes.length;
+  const rowsHtml = items.length === 0
+    ? `<tr><td colspan="${totalCols}" style="padding:16px; text-align:center; color:#64748b; font-size:12px;">No students enrolled in this batch</td></tr>`
+    : items.map((item, idx) => {
+        const examCellsHtml = item.examScores.map((sc, i) => {
+          const th = examThemes[i];
+          const isActiveCol = activeTheme && th?.code === activeTheme.code;
+          if (isActiveCol && item.badgeLabel !== 'PASSED') {
+            return `<td style="padding:6px 6px; text-align:center; color:${item.badgeColor}; font-size:12px; font-weight:800; white-space:nowrap;" title="EX-${i + 1}: ${escapeHtml(item.detail)}">${item.badgeLabel}</td>`;
+          }
+          if (sc === null) {
+            return `<td style="padding:6px 6px; text-align:center; color:#64748b; font-size:12px; font-weight:500;">—</td>`;
+          }
+          const scColor = typeof getGradeColorByScore === 'function'
+            ? getGradeColorByScore(sc)
+            : (sc >= 60 ? 'var(--grade-a, #00c000)' : 'var(--grade-e, #ff0000)');
+          return `<td style="padding:6px 6px; text-align:center; color:${scColor}; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;" title="EX-${i + 1}: ${sc}%">${sc}%</td>`;
+        }).join('');
+
+        return `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+            <td style="padding:6px 6px; text-align:center; color:#64748b; font-weight:700; width:36px;">${idx + 1}</td>
+            <td style="padding:6px 8px; color:#ffffff; font-weight:700; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(item.student.name)}">${escapeHtml(item.student.name)}</td>
+            ${examCellsHtml}
+            <td style="padding:6px 8px; color:${item.detailColor}; font-weight:600; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(item.detail)}">${escapeHtml(item.detail)}</td>
+          </tr>
+        `;
+      }).join('');
+
+  return `
+    <div class="card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
+      <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px; flex-shrink: 0;">
+        <span style="font-size: 12px; font-weight: 800; color: #ff2d87; text-transform: uppercase; letter-spacing: 0.04em;">
+          EXAM ELIGIBILITY &bull; STUDENT MONITOR
+        </span>
+        <span style="font-size: 12px; color: #94a3b8; font-weight: 600;">
+          ${examThemes.length} Exams &bull; ${eligibleTotal}/${items.length} Eligible
+        </span>
+      </div>
+      <div class="analytics-table-wrap" style="flex: 1 1 0 !important; min-height: 0 !important; height: 100% !important; overflow: auto !important; position: relative !important; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
+        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead>
+            <tr style="background: #1e293b; border-bottom: 1px solid rgba(255,255,255,0.1);">
+              <th style="width: 36px; padding: 6px 6px; text-align: center; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">#</th>
+              <th style="min-width: 160px; padding: 6px 8px; text-align: left; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">STUDENT NAME</th>
+              ${examHeadersHtml}
+              <th style="min-width: 165px; padding: 6px 8px; text-align: left; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">ELIGIBILITY DETAIL</th>
             </tr>
           </thead>
           <tbody>
@@ -830,9 +960,14 @@ export async function renderClassTestSessions(container, context = {}) {
         ${renderThemeCard(activeTheme, context)}
       </div>
 
-      <!-- Class Roster & Live Attendance Monitor Table -->
-      <div id="class-roster-attendance-container" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
-        ${renderClassRosterAttendanceTable(activeBatchStudents, sessionAttendanceMap, activeTheme, context, totalViolationsDebt)}
+      <!-- Dual Harmonized Monitor Tables (Left: Live Attendance, Right: Exam Eligibility) -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
+        <div id="class-roster-attendance-container" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
+          ${renderClassRosterAttendanceTable(activeBatchStudents, sessionAttendanceMap, activeTheme, context, totalViolationsDebt)}
+        </div>
+        <div id="exam-eligible-students-container" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
+          ${renderExamEligibleStudentsTable(activeTheme, activeBatchStudents, themesData, context)}
+        </div>
       </div>
     </div>
 
@@ -1657,9 +1792,16 @@ function renderThemeCard(theme, context) {
     }
 
     const totalSeconds = (wCount * wPace) + (pCount * pPace);
-    autoDur = totalSeconds > 0
-      ? Math.max(5, Math.ceil(totalSeconds / 60))
-      : (examTest?.working_duration_minutes || wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 45);
+    const savedWordsDur = Number(examTest?.payload?.words_duration_minutes || 0);
+    const savedPhrasesDur = Number(examTest?.payload?.phrases_duration_minutes || 0);
+    const savedExamDur = (hasExam && examTest)
+      ? ((savedWordsDur > 0 && savedPhrasesDur > 0) ? (savedWordsDur + savedPhrasesDur) : Number(examTest.working_duration_minutes || 0))
+      : 0;
+    autoDur = savedExamDur > 0
+      ? savedExamDur
+      : (totalSeconds > 0
+          ? Math.max(5, Math.ceil(totalSeconds / 60))
+          : (examTest?.working_duration_minutes || wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 45));
   }
 
   const examTitleStr = isNonVocab
@@ -2344,16 +2486,30 @@ function openThemeSessionModal(container, theme, mode, context) {
     }
 
     const totalSeconds = (wCount * wPace) + (pCount * pPace);
-    const autoDur = totalSeconds > 0
-      ? Math.max(5, Math.ceil(totalSeconds / 60))
-      : (theme.examTest?.working_duration_minutes || 45);
+    const savedWordsDur = Number(theme.examTest?.payload?.words_duration_minutes || 0);
+    const savedPhrasesDur = Number(theme.examTest?.payload?.phrases_duration_minutes || 0);
+    const savedExamDur = (savedWordsDur > 0 && savedPhrasesDur > 0)
+      ? (savedWordsDur + savedPhrasesDur)
+      : Number(theme.examTest?.working_duration_minutes || 0);
+    const useExamSavedDur = !modal.dataset.modeChanged && savedExamDur > 0;
+    const autoDur = useExamSavedDur
+      ? savedExamDur
+      : (totalSeconds > 0
+          ? Math.max(5, Math.ceil(totalSeconds / 60))
+          : (theme.examTest?.working_duration_minutes || 45));
 
     const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
     if (_suggEl) {
-      const breakdownStr = pCount > 0
-        ? `${wCount} Words @ ${wPace}s + ${pCount} Phrases @ ${pPace}s`
-        : `${wCount} Questions @ ${wPace}s`;
-      _suggEl.textContent = `Auto: ${autoDur} min (${breakdownStr})`;
+      if (useExamSavedDur && savedWordsDur > 0 && savedPhrasesDur > 0) {
+        _suggEl.textContent = `Exam Default: ${autoDur} min (${savedWordsDur}m Words + ${savedPhrasesDur}m Phrases)`;
+      } else if (useExamSavedDur) {
+        _suggEl.textContent = `Exam Default: ${autoDur} min`;
+      } else {
+        const breakdownStr = pCount > 0
+          ? `${wCount} Words @ ${wPace}s + ${pCount} Phrases @ ${pPace}s`
+          : `${wCount} Questions @ ${wPace}s`;
+        _suggEl.textContent = `Auto: ${autoDur} min (${breakdownStr})`;
+      }
     }
 
     if (durationInput && !durationInput.dataset.userSet) {
@@ -2361,15 +2517,18 @@ function openThemeSessionModal(container, theme, mode, context) {
     }
   };
 
+  delete modal.dataset.modeChanged;
   if (wordsModuleSelect) {
     wordsModuleSelect.onchange = (e) => {
       _selectedAnswerModeWords = e.target.value;
+      modal.dataset.modeChanged = 'true';
       recalcVocabDuration();
     };
   }
   if (phrasesModuleSelect) {
     phrasesModuleSelect.onchange = (e) => {
       _selectedAnswerModePhrases = e.target.value;
+      modal.dataset.modeChanged = 'true';
       recalcVocabDuration();
     };
   }
