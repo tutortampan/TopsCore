@@ -6693,23 +6693,8 @@ export function calculateAutoDurationMinutes(questionCount, answerType = 'spoken
   const isPhrase = String(category).toLowerCase() === 'phrases' || String(answerType).toLowerCase().includes('phrase');
   const ansType = String(answerType || '').toLowerCase();
 
-  // Standar Pacing SSOT (DECISION-063 Khusus Vocabulary Class):
-  // 1 kata: 10 detik spoken, 15 detik written, 10 detik selection
-  // 1 frasa: 20 detik spoken, 10 detik selection, 20 detik written
-  let rate;
-  if (isPhrase) {
-    if (ansType === 'selection' || ansType === 'multiple_choice') {
-      rate = 10;
-    } else {
-      rate = 20; // spoken and written default 20s
-    }
-  } else {
-    if (ansType === 'written') {
-      rate = 15;
-    } else {
-      rate = 10; // spoken and selection default 10s
-    }
-  }
+  // Uniform pacing for both Words and Phrases (15s written, 10s spoken/selection)
+  let rate = (ansType === 'written') ? 15 : 10;
 
   if (customPace && Number(customPace) > 0) {
     rate = Number(customPace);

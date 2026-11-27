@@ -1753,6 +1753,35 @@ function renderBatchReadinessMatrix(students, themesData, context, _ignoredTheme
 /**
  * Renders a single unified Theme Card - 250px Zero-Overflow Glassmorphism with Standard 12px Font & 10px Gap
  */
+function resolveLiveVaultBreakdown(testObj, context) {
+  const vault = context?.allVault;
+  if (!testObj || !Array.isArray(vault) || vault.length === 0) return null;
+  const pl = testObj.payload || {};
+  if (!pl.is_dynamic_shell && !testObj.is_dynamic_shell) return null;
+  const lvlObj = context?.levelMap?.[testObj.level_id] || context?.levelMap?.[context?.currentClass?.level_id] || testObj.levels;
+  const lvlNum = lvlObj?.level_number != null ? Number(lvlObj.level_number) : null;
+  if (lvlNum === null || isNaN(lvlNum)) return null;
+  const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  let themes = (Array.isArray(pl.themes) && pl.themes.length > 0) ? pl.themes.map(t => String(t).toUpperCase()) : null;
+  if (!themes && pl.theme_code) {
+    const idx = allThemes.indexOf(String(pl.theme_code).toUpperCase());
+    themes = idx >= 0 ? allThemes.slice(0, idx + 1) : [String(pl.theme_code).toUpperCase()];
+  }
+  const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
+  let wCount = 0;
+  let pCount = 0;
+  for (const v of vault) {
+    if (v.deleted_at) continue;
+    if (Number(v.target_level) !== lvlNum) continue;
+    if (themes && !themes.includes(String(v.theme_code || '').toUpperCase())) continue;
+    const isPhr = phraseTypes.includes(String(v.word_type || '').toLowerCase()) || v.category === 'phrases';
+    if (isPhr) pCount++;
+    else wCount++;
+  }
+  if (wCount + pCount === 0) return null;
+  return { wCount, pCount, total: wCount + pCount };
+}
+
 function renderThemeCard(theme, context) {
   if (!theme) {
     return `
@@ -1784,9 +1813,10 @@ function renderThemeCard(theme, context) {
 
   const isNonVocab = Boolean(theme.isNonVocab);
   const examKey = getExamItemKey(theme);
+  const liveBreakdown = !isNonVocab ? resolveLiveVaultBreakdown(examTest, context) : null;
   const wordsQ = wordsTest?.total_questions || wordsTest?.payload?.total_questions || (Array.isArray(wordsTest?.questions) ? wordsTest.questions.length : 0);
   const phrasesQ = phrasesTest?.total_questions || phrasesTest?.payload?.total_questions || (Array.isArray(phrasesTest?.questions) ? phrasesTest.questions.length : 0);
-  const examQ = examTest?.total_questions || examTest?.payload?.total_questions || (Array.isArray(examTest?.questions) ? examTest.questions.length : 0);
+  const examQ = liveBreakdown ? liveBreakdown.total : (examTest?.total_questions || examTest?.payload?.total_questions || (Array.isArray(examTest?.questions) ? examTest.questions.length : 0));
   const totalQ = isNonVocab ? (theme.totalQuestions || 20) : (examTest ? examQ : (wordsQ + phrasesQ));
 
   const enrolledCount = (allowedStudentIds && allowedStudentIds.length) ? allowedStudentIds.length : 0;
@@ -1814,32 +1844,37 @@ function renderThemeCard(theme, context) {
     const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice') ? 10 : 20;
 
     if (hasExam) {
-      const isUnified = examTest.payload?.is_unified || examTest.payload?.category === 'unified' || examQ === 200;
-      if (isUnified && examQ > 0) {
-        if (Array.isArray(examTest.payload?.questions) && examTest.payload.questions.length > 0) {
-          examTest.payload.questions.forEach(q => {
-            if (q.test_section === 'phrases' || q.category === 'phrases') pCount++;
-            else wCount++;
-          });
-        }
-        if (wCount === 0 && pCount === 0) {
-          if (examQ === 200) {
-            wCount = 160;
-            pCount = 40;
-          } else if (examQ === 50) {
-            wCount = 40;
-            pCount = 10;
-          } else {
-            pCount = Math.round(examQ * 0.2);
-            wCount = examQ - pCount;
-          }
-        }
+      if (liveBreakdown) {
+        wCount = liveBreakdown.wCount;
+        pCount = liveBreakdown.pCount;
       } else {
-        const cat = (examTest.payload?.category || examTest.category || '').toLowerCase();
-        if (cat === 'phrases') {
-          pCount = examQ;
+        const isUnified = examTest.payload?.is_unified || examTest.payload?.category === 'unified' || examQ === 200;
+        if (isUnified && examQ > 0) {
+          if (Array.isArray(examTest.payload?.questions) && examTest.payload.questions.length > 0) {
+            examTest.payload.questions.forEach(q => {
+              if (q.test_section === 'phrases' || q.category === 'phrases') pCount++;
+              else wCount++;
+            });
+          }
+          if (wCount === 0 && pCount === 0) {
+            if (examQ === 200) {
+              wCount = 160;
+              pCount = 40;
+            } else if (examQ === 50) {
+              wCount = 40;
+              pCount = 10;
+            } else {
+              pCount = Math.round(examQ * 0.2);
+              wCount = examQ - pCount;
+            }
+          }
         } else {
-          wCount = examQ;
+          const cat = (examTest.payload?.category || examTest.category || '').toLowerCase();
+          if (cat === 'phrases') {
+            pCount = examQ;
+          } else {
+            wCount = examQ;
+          }
         }
       }
     } else {
@@ -1848,10 +1883,8 @@ function renderThemeCard(theme, context) {
     }
 
     const totalSeconds = (wCount * wPace) + (pCount * pPace);
-    const savedWordsDur = Number(examTest?.payload?.words_duration_minutes || 0);
-    const savedPhrasesDur = Number(examTest?.payload?.phrases_duration_minutes || 0);
     const savedExamDur = (hasExam && examTest)
-      ? ((savedWordsDur > 0 && savedPhrasesDur > 0) ? (savedWordsDur + savedPhrasesDur) : Number(examTest.working_duration_minutes || 0))
+      ? Number(examTest.working_duration_minutes || examTest?.payload?.working_duration_minutes || 0)
       : 0;
     autoDur = savedExamDur > 0
       ? savedExamDur
@@ -2507,12 +2540,13 @@ function openThemeSessionModal(container, theme, mode, context, themesData = [])
     const wPace = (wordsAns === 'written') ? 15 : 10;
     const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice' || phrasesAns === 'recognition') ? 10 : 20;
 
-    const _examQ = curTheme.examTest?.total_questions || curTheme.examTest?.payload?.total_questions || (Array.isArray(curTheme.examTest?.questions) ? curTheme.examTest.questions.length : 0) || 0;
-    let wCount = 0;
-    let pCount = 0;
+    const modalLiveBreakdown = resolveLiveVaultBreakdown(curTheme.examTest, context);
+    const _examQ = modalLiveBreakdown ? modalLiveBreakdown.total : (curTheme.examTest?.total_questions || curTheme.examTest?.payload?.total_questions || (Array.isArray(curTheme.examTest?.questions) ? curTheme.examTest.questions.length : 0) || 0);
+    let wCount = modalLiveBreakdown ? modalLiveBreakdown.wCount : 0;
+    let pCount = modalLiveBreakdown ? modalLiveBreakdown.pCount : 0;
 
     const isUnified = curTheme.examTest?.payload?.is_unified || curTheme.examTest?.payload?.category === 'unified' || _examQ === 200;
-    if (isUnified && _examQ > 0) {
+    if (isUnified && _examQ > 0 && !modalLiveBreakdown) {
       if (Array.isArray(curTheme.examTest?.payload?.questions) && curTheme.examTest.payload.questions.length > 0) {
         curTheme.examTest.payload.questions.forEach(q => {
           if (q.test_section === 'phrases' || q.category === 'phrases') pCount++;
@@ -2544,11 +2578,7 @@ function openThemeSessionModal(container, theme, mode, context, themesData = [])
     }
 
     const totalSeconds = (wCount * wPace) + (pCount * pPace);
-    const savedWordsDur = Number(curTheme.examTest?.payload?.words_duration_minutes || 0);
-    const savedPhrasesDur = Number(curTheme.examTest?.payload?.phrases_duration_minutes || 0);
-    const savedExamDur = (savedWordsDur > 0 && savedPhrasesDur > 0)
-      ? (savedWordsDur + savedPhrasesDur)
-      : Number(curTheme.examTest?.working_duration_minutes || 0);
+    const savedExamDur = Number(curTheme.examTest?.working_duration_minutes || curTheme.examTest?.payload?.working_duration_minutes || 0);
     const useExamSavedDur = !modal.dataset.modeChanged && savedExamDur > 0;
     const autoDur = useExamSavedDur
       ? savedExamDur
@@ -2558,9 +2588,7 @@ function openThemeSessionModal(container, theme, mode, context, themesData = [])
 
     const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
     if (_suggEl) {
-      if (useExamSavedDur && savedWordsDur > 0 && savedPhrasesDur > 0) {
-        _suggEl.textContent = `Exam Default: ${autoDur} min (${savedWordsDur}m Words + ${savedPhrasesDur}m Phrases)`;
-      } else if (useExamSavedDur) {
+      if (useExamSavedDur) {
         _suggEl.textContent = `Exam Default: ${autoDur} min`;
       } else {
         const breakdownStr = pCount > 0
@@ -4388,11 +4416,22 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
           let wPass = 0;
           let pPass = 0;
           taskAtts.forEach(a => {
+            const fr = String(a.forgiven_reason || '');
+            const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
+            if (mMatch) {
+              const rawM = parseInt(mMatch[1], 10);
+              const comp = (mMatch[3] || '').toUpperCase();
+              if (comp === 'PHRASES') pPass = Math.max(pPass, Math.min(7, rawM));
+              else if (comp === 'WORDS') wPass = Math.max(wPass, Math.min(7, rawM));
+              else {
+                wPass = Math.max(wPass, Math.min(7, rawM));
+                pPass = Math.max(pPass, Math.min(7, rawM));
+              }
+            }
             const st = String(a.status || '').toLowerCase();
             const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
             const pct = parseFloat(a.effective_score ?? a.percentage ?? 0);
             if (isSub && pct >= 60) {
-              const fr = String(a.forgiven_reason || '');
               const tQ = Number(a.total_questions || 0);
               const cCount = Number(a.correct_count || a.score || 0);
               const isPhr = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10 && tQ <= 20) || /PHRASES/i.test(fr);
@@ -4402,13 +4441,19 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
           });
           hasPassed = (wPass >= 7 && pPass >= 7) || (wPass + pPass >= 14);
         } else {
-          const passCount = taskAtts.filter(a => {
+          const reqPasses = isNonVocab ? 1 : 7;
+          let passCount = 0;
+          taskAtts.forEach(a => {
+            const fr = String(a.forgiven_reason || '');
+            const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)/i);
+            if (mMatch) {
+              passCount = Math.max(passCount, Math.min(reqPasses, parseInt(mMatch[1], 10)));
+            }
             const st = String(a.status || '').toLowerCase();
             const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
             const pct = parseFloat(a.effective_score ?? a.percentage ?? 0);
-            return isSub && pct >= 60;
-          }).length;
-          const reqPasses = isNonVocab ? 1 : 7;
+            if (isSub && pct >= 60) passCount++;
+          });
           hasPassed = passCount >= reqPasses;
         }
 

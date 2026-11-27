@@ -2,7 +2,7 @@
 // Format: YYYYMMDD_vNNN  — This single change forces ALL student devices to
 // automatically download the new Service Worker and clear the old cache.
 // Students NEVER need to manually clear their browser cache.
-const BUILD_DATE = '20261128_v254';
+const BUILD_DATE = '20261128_v255';
 const CACHE_NAME = `topscore-cache-${BUILD_DATE}`;
 const ASSETS_TO_CACHE = [
   './',

@@ -1355,45 +1355,30 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           if (attemptData) {
             const isExamMode = String(testData?.category || testData?.test_type || '').toUpperCase() === 'EXAM'
               || /EXAM/i.test(testData?.shell_code || '');
+            const manualDur = Number(testData?.working_duration_minutes || testData?.payload?.working_duration_minutes || 0);
 
             if (isExamMode) {
-              // Exam Mode (Unified Words + Phrases): students manage their own time
-              // across sections using the overall Exam Session remaining time.
+              // Exam Mode (Unified Words + Phrases): students share one unified exam window/duration
               const sessionEndIso = testData?.payload?.test_session?.auto_close_at || testData?.availability_end;
               if (sessionEndIso && !isNaN(new Date(sessionEndIso).getTime())) {
                 attemptData.expires_at = new Date(sessionEndIso).toISOString();
+              } else if (manualDur > 0) {
+                const startedAt = attemptData?.started_at ? new Date(attemptData.started_at) : new Date();
+                attemptData.expires_at = new Date(startedAt.getTime() + manualDur * 60000).toISOString();
               }
               if (attemptData.expires_at) {
                 _lastKnownServerExpMs = new Date(attemptData.expires_at).getTime();
               }
             } else {
-              // Task Mode: use per-section duration (Words vs Phrases)
-              // Standar Pacing SSOT (DECISION-063 Khusus Vocabulary Class):
-              // Words: 10s spoken / 15s written / 10s selection
-              // Phrases: 20s spoken / 10s selection / 20s written
-              const manualDur = Number(testData?.working_duration_minutes || testData?.payload?.working_duration_minutes || 0);
-              const isPhraseSection = sectionKey === 'phrases';
-              const sectionSpecificDur = isPhraseSection
-                ? Number(testData?.payload?.phrases_duration_minutes || testData?.payload?.phrasesDurationMinutes || 0)
-                : Number(testData?.payload?.words_duration_minutes || testData?.payload?.wordsDurationMinutes || 0);
-              const isUnifiedTest = Boolean(hasTwoSections || testData?.payload?.is_unified || testData?.payload?.category === 'unified');
+              // Task Mode: use unified duration for both Words and Phrases
               const sessModes = testData?.payload?.test_session?.answering_modes;
               const sessMode = testData?.payload?.test_session?.answering_mode;
-              const curMode = isPhraseSection
-                ? (sessModes?.phrases || sessMode || 'selection')
-                : (sessModes?.words || sessMode || 'written');
-              let pace = 10;
-              if (isPhraseSection) {
-                pace = (curMode === 'recognition' || curMode === 'selection' || curMode === 'multiple_choice') ? 10 : 20;
-              } else {
-                pace = (curMode === 'written') ? 15 : 10;
-              }
+              const curMode = (sectionKey === 'phrases' ? sessModes?.phrases : sessModes?.words) || sessMode || testData?.answer_type || 'spoken';
+              const pace = (curMode === 'written') ? 15 : 10;
               const autoCalcDur = Math.max(1, Math.ceil((allAnswerRows.length * pace) / 60));
-              const sectionDur = sectionSpecificDur > 0
-                ? sectionSpecificDur
-                : (!isUnifiedTest && manualDur > 0 ? manualDur : autoCalcDur);
+              const unifiedDur = manualDur > 0 ? manualDur : autoCalcDur;
               const startedAt = attemptData?.started_at ? new Date(attemptData.started_at) : new Date();
-              attemptData.expires_at = new Date(startedAt.getTime() + sectionDur * 60000).toISOString();
+              attemptData.expires_at = new Date(startedAt.getTime() + unifiedDur * 60000).toISOString();
               _lastKnownServerExpMs = new Date(attemptData.expires_at).getTime();
             }
 

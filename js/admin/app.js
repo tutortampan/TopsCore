@@ -2960,6 +2960,7 @@ if (typeof window !== 'undefined') {
               allBatches,
               allLevels,
               allAttempts,
+              allVault: _vaultRows,
               batchMap,
               levelMap
             });
