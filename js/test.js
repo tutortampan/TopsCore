@@ -5,7 +5,7 @@ import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261106_v160'
  */
 
 import { startTest, submitTest, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261127_v689';
-    import { requireStudentSession } from './session.js?v=20261106_v160';
+    import { requireStudentSession, setStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { startCountdown, isExpired } from './timer.js?v=20261106_v160';
     import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261126_v691';
@@ -4795,27 +4795,37 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       const secParam = activeSec ? `&section=${encodeURIComponent(activeSec)}` : '';
 
       try {
-        const result = await submitTest(attemptData.id, payload, { status: targetStatus, section: activeSec });
+        const isDescriptionTest = allAnswerRows.some(r => {
+          const s = typeof r?.question_snapshot === 'string'
+            ? (() => { try { return JSON.parse(r.question_snapshot); } catch(_) { return {}; } })()
+            : (r?.question_snapshot || {});
+          return s?.answer_type === 'description' || r?.question_type_snapshot === 'Description' || s?.module === 'description';
+        });
+        const result = await submitTest(attemptData.id, payload, {
+          status: targetStatus,
+          section: activeSec,
+          isDescription: isDescriptionTest,
+          answerRows: allAnswerRows
+        });
 
         if (String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category)) {
-          try {
-            await checkAndTriggerLevelUp(session.student_id, testData.level_id);
-          } catch (e) {
-            console.error('Level up check failed:', e);
-          }
-          // Photo retake gating: Passing an Exam grants 1 photo retake credit (non-accumulative)
-          try {
-            const finalPct = parseFloat(result?.percentage ?? attemptData?.percentage ?? 0);
-            if (finalPct >= 60.0) {
+          const finalPct = parseFloat(result?.percentage ?? attemptData?.percentage ?? 0);
+          if (finalPct >= 60.0) {
+            try {
+              await checkAndTriggerLevelUp(session.student_id, testData.level_id);
+            } catch (e) {
+              console.error('Level up check failed:', e);
+            }
+            // Photo retake gating: Passing an Exam grants 1 photo retake credit (non-accumulative)
+            try {
               localStorage.setItem(`stu_photo_retake_eligible_${session.student_id}`, 'true');
               if (session) {
                 session.photo_retake_eligible = true;
-                const { setStudentSession } = await import('./session.js?v=20261106_v160');
                 setStudentSession(session);
               }
+            } catch (retakeErr) {
+              console.warn('Failed to update photo retake eligibility:', retakeErr);
             }
-          } catch (retakeErr) {
-            console.warn('Failed to update photo retake eligibility:', retakeErr);
           }
         }
 

@@ -5,7 +5,7 @@ let deferredInstallPrompt = null;
 
 // ─── DEPLOY VERSION: Keep in sync with BUILD_DATE in sw.js ───────────────────
 // Update this string every deploy so browsers re-fetch the latest sw.js.
-const SW_VERSION = '20261128_v255';
+const SW_VERSION = '20261128_v256';
 
 export function initPWA() {
   // 1. Register Service Worker with safe update detection

@@ -2402,8 +2402,15 @@ export async function startTest(studentId, testId) {
         throw pErr;
       }
     }
+    const liveSessForOverride = asmData.payload?.test_session;
+    const isTutorSessionOverride = Boolean(
+      liveSessForOverride?.status === 'UNLOCKED' &&
+      (!liveSessForOverride.auto_close_at || new Date(liveSessForOverride.auto_close_at) > new Date()) &&
+      Array.isArray(liveSessForOverride.allowed_student_ids) &&
+      liveSessForOverride.allowed_student_ids.includes(studentId)
+    );
     const prereqId = asmData.prerequisite_test_id || asmData.prerequisite_id;
-    if (prereqId && !isStandaloneTryout) {
+    if (prereqId && !isStandaloneTryout && !isTutorSessionOverride) {
     const [prereqAttRes, prereqTestRes] = await Promise.all([
       sb.from('attempts')
         .select('score, percentage, effective_score, status, is_forgiven, is_remedial_unlocked, is_remedial, total_questions, correct_count, forgiven_reason')
@@ -2506,7 +2513,7 @@ export async function startTest(studentId, testId) {
   }
 
   // Guard: Repetitive Mastery Hard Gate: Taking an Exam requires dynamic target passes on all sibling Tasks
-  if (isWeeklyExam(asmData) && !isStandaloneTryout) {
+  if (isWeeklyExam(asmData) && !isStandaloneTryout && !isTutorSessionOverride) {
     const themeCode = asmData.payload?.theme_code || (asmData.shell_code ? asmData.shell_code.replace(/^[0-9]+/, '').charAt(0) : null);
     if (themeCode) {
       const { data: siblingTasks } = await sb.from('tests')
@@ -3117,6 +3124,7 @@ export async function saveAnswer(attemptAnswerId, studentAnswer) {
 export async function submitTest(attemptId, answersMap, options = {}) {
   const targetStatus = options?.status || 'submitted';
   let result = null;
+  let usedClientFallback = false;
   try {
     result = await callEdgeFunction('submit-test', { attempt_id: attemptId, answers: answersMap, status: targetStatus });
   } catch (edgeErr) {
@@ -3125,27 +3133,39 @@ export async function submitTest(attemptId, answersMap, options = {}) {
     }
   }
 
+  const providedRows = Array.isArray(options?.answerRows) ? options.answerRows : null;
+  const providedRowMap = providedRows ? new Map(providedRows.map(r => [r.id, r])) : null;
+
   if (!result) {
     // Server-authoritative fallback via PostgreSQL RPC (strictly server-side scoring & RLS compliance)
     const sb = await getSupabase();
 
     // Pre-check: If this attempt contains Description module questions, PostgreSQL RPC does not contain
     // the Royal Order NLP grammar engine. Route directly to authoritative client NLP engine.
-    let isDescriptionAttempt = false;
-    try {
-      const { data: sampleRow } = await sb.from('attempt_answers')
-        .select('question_snapshot, question_type_snapshot')
-        .eq('attempt_id', attemptId)
-        .limit(1);
-      if (sampleRow && sampleRow[0]) {
-        const snap = typeof sampleRow[0].question_snapshot === 'string'
-          ? JSON.parse(sampleRow[0].question_snapshot || '{}')
-          : (sampleRow[0].question_snapshot || {});
-        if (snap?.answer_type === 'description' || sampleRow[0].question_type_snapshot === 'Description' || snap?.module === 'description') {
-          isDescriptionAttempt = true;
+    let isDescriptionAttempt = Boolean(options?.isDescription);
+    if (options?.isDescription === undefined && providedRows) {
+      isDescriptionAttempt = providedRows.some(r => {
+        const snap = typeof r?.question_snapshot === 'string'
+          ? (() => { try { return JSON.parse(r.question_snapshot || '{}'); } catch { return {}; } })()
+          : (r?.question_snapshot || {});
+        return snap?.answer_type === 'description' || r?.question_type_snapshot === 'Description' || snap?.module === 'description';
+      });
+    } else if (options?.isDescription === undefined) {
+      try {
+        const { data: sampleRow } = await sb.from('attempt_answers')
+          .select('question_snapshot, question_type_snapshot')
+          .eq('attempt_id', attemptId)
+          .limit(1);
+        if (sampleRow && sampleRow[0]) {
+          const snap = typeof sampleRow[0].question_snapshot === 'string'
+            ? JSON.parse(sampleRow[0].question_snapshot || '{}')
+            : (sampleRow[0].question_snapshot || {});
+          if (snap?.answer_type === 'description' || sampleRow[0].question_type_snapshot === 'Description' || snap?.module === 'description') {
+            isDescriptionAttempt = true;
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     if (!isDescriptionAttempt) {
       try {
@@ -3163,25 +3183,32 @@ export async function submitTest(attemptId, answersMap, options = {}) {
     }
 
     if (!result) {
+      usedClientFallback = true;
       // Direct client evaluation fallback (guarantees student NEVER fails to submit or loses score)
-      const { data: attempt } = await sb.from('attempts').select('id, is_remedial_unlocked').eq('id', attemptId).single();
-      const { data: attemptAnswers } = await sb.from('attempt_answers').select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_snapshot, question_type_snapshot').eq('attempt_id', attemptId);
+      const [{ data: attempt }, fetchedAnswersRes] = await Promise.all([
+        sb.from('attempts').select('id, student_id, test_id, is_remedial_unlocked, forgiven_reason').eq('id', attemptId).single(),
+        providedRows
+          ? Promise.resolve({ data: providedRows })
+          : sb.from('attempt_answers').select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_snapshot, question_type_snapshot').eq('attempt_id', attemptId)
+      ]);
+      const attemptAnswers = fetchedAnswersRes?.data || [];
 
       const answersList = Array.isArray(answersMap) ? answersMap : [];
       const answersDict = new Map(answersList.map(a => [a.attempt_answer_id, a.student_answer || '']));
       const submittedIds = new Set(answersList.map(a => a.attempt_answer_id).filter(Boolean));
-      const isPartialSubmit = submittedIds.size > 0 && submittedIds.size < (attemptAnswers?.length || 0);
+      const isPartialSubmit = submittedIds.size > 0 && submittedIds.size < attemptAnswers.length;
 
       const scoredRows = isPartialSubmit
-        ? (attemptAnswers || []).filter(r => submittedIds.has(r.id))
-        : (attemptAnswers || []);
+        ? attemptAnswers.filter(r => submittedIds.has(r.id))
+        : attemptAnswers;
 
       let totalPoints = 0;
       let correctCount = 0;
       const totalQuestions = scoredRows.length || 0;
       const clientUpdatePromises = [];
+      const nowIso = new Date().toISOString();
 
-      for (const row of (attemptAnswers || [])) {
+      for (const row of attemptAnswers) {
         const isInSubmit = !isPartialSubmit || submittedIds.has(row.id);
         if (!isInSubmit) continue; // Skip non-submitted rows (e.g. other section) to avoid overwriting or penalizing
 
@@ -3201,7 +3228,7 @@ export async function submitTest(attemptId, answersMap, options = {}) {
           score: score,
           is_correct: score >= 1,
           evaluation_result: score >= 1 ? 'correct' : (score > 0 ? 'minor' : 'incorrect'),
-          updated_at: new Date().toISOString()
+          updated_at: nowIso
         }).eq('id', row.id));
       }
       if (clientUpdatePromises.length > 0) {
@@ -3217,14 +3244,14 @@ export async function submitTest(attemptId, answersMap, options = {}) {
 
       const attUpdateFields = {
         status: targetStatus,
-        submitted_at: new Date().toISOString(),
+        submitted_at: nowIso,
         score: totalPoints,
         correct_count: correctCount,
         total_questions: totalQuestions,
         percentage: pct,
         effective_score: effectiveScore,
         grade: grade,
-        updated_at: new Date().toISOString()
+        updated_at: nowIso
       };
 
       if (options?.section) {
@@ -3238,131 +3265,161 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       const { data: updAttempt, error: updAttErr } = await sb.from('attempts').update(attUpdateFields).eq('id', attemptId).select().single();
 
       if (updAttErr) throw updAttErr;
-      result = updAttempt || { id: attemptId, status: targetStatus, percentage: pct, grade: grade, total_questions: totalQuestions, score: totalPoints, correct_count: correctCount };
+      result = updAttempt || {
+        id: attemptId,
+        student_id: attempt?.student_id,
+        test_id: attempt?.test_id,
+        status: targetStatus,
+        percentage: pct,
+        effective_score: effectiveScore,
+        is_remedial_unlocked: attempt?.is_remedial_unlocked,
+        grade: grade,
+        total_questions: totalQuestions,
+        score: totalPoints,
+        correct_count: correctCount
+      };
     }
   }
 
   // Post-submit Answer Tolerance & Spelling Sync:
-  // Verifies that answers scored by server RPC didn't penalize hyphens, letter spelling spaces, or valid word forms
-  try {
-    const sb = await getSupabase();
-    const { data: attAnsList } = await sb.from('attempt_answers')
-      .select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_snapshot, question_type_snapshot, score, is_correct, evaluation_result')
-      .eq('attempt_id', attemptId);
+  // Verifies that answers scored by server RPC didn't penalize hyphens, letter spelling spaces, or valid word forms.
+  // Skipped when direct client evaluation already ran (it uses evaluateAnswer directly).
+  if (!usedClientFallback) {
+    try {
+      const sb = await getSupabase();
+      const selectCols = providedRowMap
+        ? 'id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_type_snapshot, score, is_correct, evaluation_result'
+        : 'id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_snapshot, question_type_snapshot, score, is_correct, evaluation_result';
 
-    const answersList = Array.isArray(answersMap) ? answersMap : [];
-    const submittedIds = new Set(answersList.map(a => a.attempt_answer_id).filter(Boolean));
-    const isPartialSubmit = submittedIds.size > 0 && submittedIds.size < (attAnsList?.length || 0);
+      const { data: attAnsList } = await sb.from('attempt_answers')
+        .select(selectCols)
+        .eq('attempt_id', attemptId);
 
-    const scoredList = isPartialSubmit
-      ? (attAnsList || []).filter(r => submittedIds.has(r.id))
-      : (attAnsList || []);
+      const answersList = Array.isArray(answersMap) ? answersMap : [];
+      const submittedIds = new Set(answersList.map(a => a.attempt_answer_id).filter(Boolean));
+      const isPartialSubmit = submittedIds.size > 0 && submittedIds.size < (attAnsList?.length || 0);
 
-    const totalQ = scoredList.length || 0;
+      const scoredList = isPartialSubmit
+        ? (attAnsList || []).filter(r => submittedIds.has(r.id))
+        : (attAnsList || []);
 
-    // In partial submissions (e.g. Words vs Phrases component tests), ensure unsubmitted sibling questions
-    // are not penalized or marked as incorrect by server fallback
-    if (isPartialSubmit && attAnsList && attAnsList.length > 0) {
-      const unsubmittedRows = attAnsList.filter(r => !submittedIds.has(r.id));
-      for (const unRow of unsubmittedRows) {
-        if (unRow.evaluation_result != null || unRow.score != null) {
-          await sb.from('attempt_answers').update({
+      const totalQ = scoredList.length || 0;
+      const nowIso = new Date().toISOString();
+
+      // In partial submissions (e.g. Words vs Phrases component tests), batch-reset unsubmitted sibling questions
+      // in a single query instead of sequential per-row updates.
+      let resetUnsubmittedPromise = null;
+      if (isPartialSubmit && attAnsList && attAnsList.length > 0) {
+        const unsubmittedIdsToReset = attAnsList
+          .filter(r => !submittedIds.has(r.id) && (r.evaluation_result != null || r.score != null))
+          .map(r => r.id);
+        if (unsubmittedIdsToReset.length > 0) {
+          resetUnsubmittedPromise = sb.from('attempt_answers').update({
             student_answer: null,
             score: null,
             is_correct: null,
             evaluation_result: null,
-            updated_at: new Date().toISOString()
-          }).eq('id', unRow.id);
+            updated_at: nowIso
+          }).in('id', unsubmittedIdsToReset);
         }
       }
-    }
 
-    // Check if previous attempt record had wrong denominator (e.g. 50 instead of 40)
-    const { data: currentAtt } = await sb.from('attempts').select('total_questions, is_remedial_unlocked').eq('id', attemptId).maybeSingle();
-    let needsRescore = Boolean(isPartialSubmit && currentAtt && currentAtt.total_questions !== totalQ);
-    let newScore = 0;
-    let newCorrect = 0;
+      // Reuse result fields if present to avoid redundant attempts SELECT
+      const currentAtt = (result && result.total_questions != null)
+        ? result
+        : (await sb.from('attempts').select('total_questions, is_remedial_unlocked').eq('id', attemptId).maybeSingle()).data;
 
-    const rescoreUpdatePromises = [];
-    for (const r of scoredList) {
-      const snap = typeof r.question_snapshot === 'string'
-        ? (() => { try { return JSON.parse(r.question_snapshot); } catch { return {}; } })()
-        : (r.question_snapshot || {});
-      const qType = snap?.answer_type || r.question_type_snapshot || 'written';
-      const targetDemo = snap?.target_demonstrative || r.accepted_answers_snapshot || r.correct_answer_snapshot;
-      const ev = evaluateAnswer(r.student_answer, targetDemo, qType);
-      const trueScore = ev.score || 0;
-      if (trueScore > (r.score || 0)) {
-        needsRescore = true;
-        rescoreUpdatePromises.push(sb.from('attempt_answers').update({
-          score: trueScore,
-          is_correct: trueScore >= 1,
-          evaluation_result: ev.result || (trueScore >= 1 ? 'correct' : 'minor'),
-          updated_at: new Date().toISOString()
-        }).eq('id', r.id));
-        newScore += trueScore;
-        if (trueScore >= 1) newCorrect++;
-      } else {
-        newScore += (r.score || 0);
-        if (r.is_correct || r.score >= 1) newCorrect++;
+      let needsRescore = Boolean(isPartialSubmit && currentAtt && currentAtt.total_questions !== totalQ);
+      let newScore = 0;
+      let newCorrect = 0;
+
+      const rescoreUpdatePromises = [];
+      if (resetUnsubmittedPromise) rescoreUpdatePromises.push(resetUnsubmittedPromise);
+
+      for (const r of scoredList) {
+        if ((r.score || 0) >= 1) {
+          newScore += (r.score || 0);
+          newCorrect++;
+          continue;
+        }
+        const rawSnap = providedRowMap ? providedRowMap.get(r.id)?.question_snapshot : r.question_snapshot;
+        const snap = typeof rawSnap === 'string'
+          ? (() => { try { return JSON.parse(rawSnap); } catch { return {}; } })()
+          : (rawSnap || {});
+        const qType = snap?.answer_type || r.question_type_snapshot || 'written';
+        const targetDemo = snap?.target_demonstrative || r.accepted_answers_snapshot || r.correct_answer_snapshot;
+        const ev = evaluateAnswer(r.student_answer, targetDemo, qType);
+        const trueScore = ev.score || 0;
+        if (trueScore > (r.score || 0)) {
+          needsRescore = true;
+          rescoreUpdatePromises.push(sb.from('attempt_answers').update({
+            score: trueScore,
+            is_correct: trueScore >= 1,
+            evaluation_result: ev.result || (trueScore >= 1 ? 'correct' : 'minor'),
+            updated_at: nowIso
+          }).eq('id', r.id));
+          newScore += trueScore;
+          if (trueScore >= 1) newCorrect++;
+        } else {
+          newScore += (r.score || 0);
+          if (r.is_correct || r.score >= 1) newCorrect++;
+        }
       }
-    }
-    if (rescoreUpdatePromises.length > 0) {
-      await Promise.all(rescoreUpdatePromises);
-    }
+      if (rescoreUpdatePromises.length > 0) {
+        await Promise.all(rescoreUpdatePromises);
+      }
 
-    if (needsRescore && totalQ > 0) {
-      const pct = Math.round((newScore / totalQ) * 10000) / 100;
-      const effScore = currentAtt?.is_remedial_unlocked ? Math.min(pct, 60.0) : pct;
-      const grade = getGrade(effScore);
-      const { data: fixedAtt } = await sb.from('attempts').update({
-        score: newScore,
-        correct_count: newCorrect,
-        total_questions: totalQ,
-        percentage: pct,
-        effective_score: effScore,
-        grade: grade,
-        updated_at: new Date().toISOString()
-      }).eq('id', attemptId).select().single();
-      if (fixedAtt) result = fixedAtt;
+      if (needsRescore && totalQ > 0) {
+        const pct = Math.round((newScore / totalQ) * 10000) / 100;
+        const effScore = currentAtt?.is_remedial_unlocked ? Math.min(pct, 60.0) : pct;
+        const grade = getGrade(effScore);
+        const { data: fixedAtt } = await sb.from('attempts').update({
+          score: newScore,
+          correct_count: newCorrect,
+          total_questions: totalQ,
+          percentage: pct,
+          effective_score: effScore,
+          grade: grade,
+          updated_at: nowIso
+        }).eq('id', attemptId).select().single();
+        if (fixedAtt) result = fixedAtt;
+      }
+    } catch (syncErr) {
+      console.warn('Post-submit tolerance check notice:', syncErr);
     }
-  } catch (syncErr) {
-    console.warn('Post-submit tolerance check notice:', syncErr);
   }
 
   // Authoritative Remedial Sync (Remedial retains earned score, grade follows score)
   try {
     const sb = await getSupabase();
-    const { data: att } = await sb.from('attempts')
-      .select('id, is_remedial_unlocked, percentage, effective_score')
-      .eq('id', attemptId)
-      .single();
+    const att = (result && result.percentage != null && result.is_remedial_unlocked !== undefined)
+      ? result
+      : (await sb.from('attempts').select('id, is_remedial_unlocked, percentage, effective_score, grade').eq('id', attemptId).single()).data;
     if (att && att.is_remedial_unlocked) {
       const rawPct = parseFloat(att.percentage || 0);
       const effPct = Math.min(rawPct, 60.0);
       const remGrade = effPct >= 60 ? 'C' : (effPct >= 30 ? 'D' : 'E');
-      await sb.from('attempts')
-        .update({
-          effective_score: effPct,
-          grade: remGrade,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', attemptId);
+      if (parseFloat(att.effective_score ?? -1) !== effPct || att.grade !== remGrade) {
+        await sb.from('attempts')
+          .update({
+            effective_score: effPct,
+            grade: remGrade,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', attemptId);
+      }
     }
   } catch (remedialErr) {
     console.warn('Post-submit remedial check notice:', remedialErr);
   }
 
   // Lean Storage & Best Score Guard Protocol (Option B):
-  // 1. Resolve Best Score strictly per (student_id, test_id)
-  // 2. Automatically purge superseded detailed answers from previous lower-scoring attempts
-  //    guaranteeing at most 1 active answer set exists per student per test.
+  // Resolve Best Score strictly per (student_id, test_id)
   try {
     const sb = await getSupabase();
-    const { data: curAttempt } = await sb.from('attempts')
-      .select('id, student_id, test_id, effective_score, percentage, status')
-      .eq('id', attemptId)
-      .single();
+    const curAttempt = (result && result.student_id && result.test_id)
+      ? result
+      : (await sb.from('attempts').select('id, student_id, test_id, effective_score, percentage, status').eq('id', attemptId).single()).data;
 
     if (curAttempt?.student_id && curAttempt?.test_id) {
       const curScore = Number(curAttempt.effective_score ?? curAttempt.percentage ?? 0);
@@ -3382,18 +3439,21 @@ export async function submitTest(attemptId, answersMap, options = {}) {
         return sibScore > curScore;
       });
 
+      const nowIso = new Date().toISOString();
       if (isNewBest) {
-        // Mark current attempt as authoritative best score
-        await sb.from('attempts').update({ is_best_score: true, updated_at: new Date().toISOString() }).eq('id', attemptId);
-
-        if (siblingAttempts && siblingAttempts.length > 0) {
-          const lowerIds = siblingAttempts.map(s => s.id);
-          // Demote siblings
-          await sb.from('attempts').update({ is_best_score: false, updated_at: new Date().toISOString() }).in('id', lowerIds);
+        const bestUpdates = [
+          sb.from('attempts').update({ is_best_score: true, updated_at: nowIso }).eq('id', attemptId)
+        ];
+        const lowerIds = (siblingAttempts || []).filter(s => s.is_best_score !== false).map(s => s.id);
+        if (lowerIds.length > 0) {
+          bestUpdates.push(
+            sb.from('attempts').update({ is_best_score: false, updated_at: nowIso }).in('id', lowerIds)
+          );
         }
+        await Promise.all(bestUpdates);
       } else {
         // Current attempt is a lower-scoring retake; mark as not best
-        await sb.from('attempts').update({ is_best_score: false, updated_at: new Date().toISOString() }).eq('id', attemptId);
+        await sb.from('attempts').update({ is_best_score: false, updated_at: nowIso }).eq('id', attemptId);
       }
     }
   } catch (purgeErr) {
@@ -5402,23 +5462,24 @@ export async function createVocabMasteryTest(config) {
 // ============================================================
 export async function checkAndTriggerLevelUp(studentId, currentLevelId) {
   const sb = await getSupabase();
-  const { data: levelData, error: lvlErr } = await sb.from('levels')
-    .select('id, level_number')
-    .eq('id', currentLevelId)
-    .single();
+  const [
+    { data: levelData, error: lvlErr },
+    { data: exams, error: exErr }
+  ] = await Promise.all([
+    sb.from('levels').select('id, level_number').eq('id', currentLevelId).single(),
+    // Level-up gate: ONLY the Final Theme TEST (tier = TEST) for this level
+    // The single test that counts is the highest display_order TEST with >= 60% to advance
+    sb.from('tests')
+      .select('id, title, display_order, shell_code, levels!inner(level_number)')
+      .eq('level_id', currentLevelId)
+      .neq('levels.level_number', 0)
+      .in('category', ['EXAM', 'TEST'])
+      .eq('status', 'PUBLISHED')
+      .order('display_order', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+  ]);
   if (lvlErr || !levelData) return { levelUp: false, newLevel: null, status: 'ERROR' };
-
-  // Level-up gate: ONLY the Final Theme TEST (tier = TEST) for this level
-  // The single test that counts is the highest display_order TEST with >= 60% to advance
-  const { data: exams, error: exErr } = await sb.from('tests')
-    .select('id, title, display_order, shell_code, levels!inner(level_number)')
-    .eq('level_id', currentLevelId)
-    .neq('levels.level_number', 0)
-    .in('category', ['EXAM', 'TEST'])
-    .eq('status', 'PUBLISHED')
-    .order('display_order', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(1); // Only the final TEST (highest display_order) counts as the gating test
   if (exErr || !exams || exams.length === 0) return { levelUp: false, newLevel: null, status: 'NO_TESTS' };
 
   const examIds = exams.map(e => e.id);
