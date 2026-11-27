@@ -2035,9 +2035,9 @@ export async function generateTestQuestions(sb, test) {
       }
     }
 
-    // Safety clamp: strictly respect configured total questions bounds (e.g. 40 for task, 120 for exam)
+    // Safety clamp: strictly respect configured total questions bounds for single-category tests (never truncate tail Phrases on Unified dynamic exams)
     const maxTargetQuestions = test.payload?.total_questions || test.total_questions;
-    if (maxTargetQuestions && Number(maxTargetQuestions) > 0 && vaultWords.length > Number(maxTargetQuestions)) {
+    if (!isUnified && maxTargetQuestions && Number(maxTargetQuestions) > 0 && vaultWords.length > Number(maxTargetQuestions)) {
       vaultWords = vaultWords.slice(0, Number(maxTargetQuestions));
     }
 
@@ -2067,20 +2067,92 @@ export async function generateTestQuestions(sb, test) {
       const isPhrasesSelection = phrasesAnsType.startsWith('dropdown') || phrasesAnsType === 'multiple_choice' || phrasesAnsType === 'selection';
       const needsDistractors = isWordsSelection || isPhrasesSelection;
 
+      const buildBigrams = (str) => {
+        const s = String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const set = new Set();
+        for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2));
+        return set;
+      };
+      const diceSim = (setA, setB) => {
+        if (!setA.size || !setB.size) return 0;
+        let inter = 0;
+        for (const bg of setA) if (setB.has(bg)) inter++;
+        return (2 * inter) / (setA.size + setB.size);
+      };
+      const buildIdWords = (str) => new Set(
+        String(str || '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3)
+      );
+
+      let preparedDistractorPool = [];
       if (needsDistractors) {
-        let allDataQuery = sb.from('vocabulary_vault').select('english, word_type, category').is('deleted_at', null);
+        let allDataQuery = sb.from('vocabulary_vault').select('english, indonesian, word_type, category, topic_code, theme_code').is('deleted_at', null);
         const { data: allData } = await allDataQuery;
         if (allData) {
-          allEnglishAnswers = allData.map(r => (r.english || '').split('/')[0].trim()).filter(Boolean);
+          const seenEn = new Set();
           allData.forEach(r => {
-            const wt = (r.word_type || 'Vocab').toLowerCase();
             const eng = (r.english || '').split('/')[0].trim();
             if (!eng) return;
+            const enLower = eng.toLowerCase();
+            if (seenEn.has(enLower)) return;
+            seenEn.add(enLower);
+            const wt = (r.word_type || 'Vocab').toLowerCase();
+            const ind = String(r.indonesian || '').trim();
+            preparedDistractorPool.push({
+              eng,
+              enLower,
+              wt,
+              topicCode: String(r.topic_code || '').toUpperCase(),
+              themeCode: String(r.theme_code || '').toUpperCase(),
+              enBigrams: buildBigrams(enLower),
+              idBigrams: buildBigrams(ind),
+              idWords: buildIdWords(ind)
+            });
+            allEnglishAnswers.push(eng);
             if (!typeDistractorPools[wt]) typeDistractorPools[wt] = [];
             typeDistractorPools[wt].push(eng);
           });
         }
       }
+
+      const selectSimilarDistractors = (vw, accepted, numDistractors) => {
+        const acceptedSet = new Set(accepted.map(a => a.toLowerCase()));
+        const targetEn = String(accepted[0] || '').toLowerCase();
+        const targetInd = String(vw.indonesian || '').trim();
+        const targetWt = String(vw.word_type || 'Vocab').toLowerCase();
+        const targetTopic = String(vw.topic_code || '').toUpperCase();
+        const targetTheme = String(vw.theme_code || '').toUpperCase();
+        const targetEnBg = buildBigrams(targetEn);
+        const targetIdBg = buildBigrams(targetInd);
+        const targetIdWords = buildIdWords(targetInd);
+
+        const scored = [];
+        for (const cand of preparedDistractorPool) {
+          if (acceptedSet.has(cand.enLower)) continue;
+          let score = 0;
+          if (cand.wt === targetWt) score += 40;
+          if (targetTopic && cand.topicCode === targetTopic) score += 30;
+          else if (targetTheme && cand.themeCode === targetTheme) score += 15;
+
+          // Word form similarity (prefix, suffix, length, character bigrams)
+          if (targetEn[0] && cand.enLower[0] === targetEn[0]) score += 12;
+          if (targetEn.length >= 2 && cand.enLower.slice(0, 2) === targetEn.slice(0, 2)) score += 10;
+          if (targetEn.length >= 2 && cand.enLower.slice(-2) === targetEn.slice(-2)) score += 8;
+          score += Math.max(0, 10 - Math.abs(cand.enLower.length - targetEn.length) * 2);
+          score += diceSim(targetEnBg, cand.enBigrams) * 25;
+
+          // Meaning (Indonesian) similarity (shared words & character bigrams)
+          let sharedWords = 0;
+          for (const w of targetIdWords) if (cand.idWords.has(w)) sharedWords++;
+          score += Math.min(35, sharedWords * 20);
+          score += diceSim(targetIdBg, cand.idBigrams) * 20;
+
+          // Slight tie-breaker jitter so identical-score candidates vary
+          score += Math.random() * 4;
+          scored.push({ eng: cand.eng, score });
+        }
+        scored.sort((a, b) => b.score - a.score);
+        return scored.slice(0, numDistractors).map(x => x.eng);
+      };
 
       questions = vaultWords.map((vw, idx) => {
         const accepted = vw.english ? vw.english.split('/').map(s => s.trim()) : [];
@@ -2097,12 +2169,9 @@ export async function generateTestQuestions(sb, test) {
         const isItemSelection = itemAnsType.startsWith('dropdown') || itemAnsType === 'multiple_choice' || itemAnsType === 'selection';
         if (isItemSelection) {
           const numDistractors = (itemAnsType === 'dropdown_10') ? 9 : 4;
-          const wordType = (vw.word_type || 'Vocab').toLowerCase();
-          let sameTypePool = (typeDistractorPools[wordType] || []).filter(a => !accepted.includes(a));
-          fisherYates(sameTypePool);
-          const globalPool = allEnglishAnswers.filter(a => !accepted.includes(a) && !sameTypePool.includes(a));
-          fisherYates(globalPool);
-          const distractors = [...sameTypePool, ...globalPool].slice(0, numDistractors);
+          const distractors = preparedDistractorPool.length > 0
+            ? selectSimilarDistractors(vw, accepted, numDistractors)
+            : [];
           optionsSnapshot = fisherYates([correctAns, ...distractors]);
         }
 
@@ -2780,6 +2849,38 @@ export async function startTest(studentId, testId) {
     .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, accepted_answers_snapshot, correct_answer_snapshot, student_answer, score')
     .eq('attempt_id', attempt.id);
 
+  const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+  const mapQuestionsToAnswerRows = (qList, startOrderOffset = 0) => qList.map((sq, idx) => ({
+    attempt_id: attempt.id,
+    question_id: isUuid(sq.question_id) ? sq.question_id : null,
+    question_snapshot: {
+      item_code: sq.item_code || sq.question_id || null,
+      question_text: sq.question_text_snapshot || sq.question_text || sq.prompt,
+      word_type: sq.word_type_snapshot || sq.word_type,
+      topic: sq.topic_snapshot || sq.topic,
+      theme: sq.theme_snapshot || sq.theme || test.payload?.theme_code || "General",
+      theme_code: sq.theme_code || test.payload?.theme_code,
+      category: sq.category_snapshot || sq.category || test.payload?.category || 'vocab',
+      display_order: startOrderOffset > 0 ? (startOrderOffset + idx + 1) : (sq.display_order ?? (idx + 1)),
+      answer_type: sq.answer_type || test.answer_type || test.payload?.answer_type || 'spoken',
+      options_snapshot: sq.options_snapshot || [],
+      test_section: sq.test_section || null,
+      section_label: sq.section_label || null,
+      section_id: sq.test_section || 'default',
+      target_demonstrative: sq.target_demonstrative || null,
+      module: sq.module || test.payload?.module || (test.module_type === 'POINT_AND_SPEAK' ? 'description' : null),
+      dynamic_type: sq.dynamic_type || null,
+      is_bonus_round: Boolean(sq.is_bonus_round),
+      fixed_option_order: Boolean(sq.fixed_option_order)
+    },
+    topic_snapshot: sq.topic_snapshot || sq.topic,
+    question_type_snapshot: sq.word_type_snapshot || sq.word_type,
+    accepted_answers_snapshot: sq.accepted_answers_snapshot || sq.accepted_answers,
+    correct_answer_snapshot: Array.isArray(sq.accepted_answers_snapshot || sq.accepted_answers) ? (sq.accepted_answers_snapshot || sq.accepted_answers).join('; ') : String(sq.accepted_answers_snapshot || sq.accepted_answers || ''),
+    student_answer: null,
+    score: 0
+  }));
+
   if (!answers || answers.length === 0) {
     const questions = await generateTestQuestions(sb, test);
     if (questions && questions.length > 0) {
@@ -2816,37 +2917,7 @@ export async function startTest(studentId, testId) {
           if (sq.prompt) sq.prompt = String(sq.prompt).replace(/\{MEMBER_1\}/g, m1).replace(/\{MEMBER_2\}/g, m2);
         });
       }
-      const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
-      const answerRows = questions.map((sq, idx) => ({
-        attempt_id: attempt.id,
-        question_id: isUuid(sq.question_id) ? sq.question_id : null,
-        question_snapshot: {
-          item_code: sq.item_code || sq.question_id || null,
-          question_text: sq.question_text_snapshot || sq.question_text || sq.prompt,
-          word_type: sq.word_type_snapshot || sq.word_type,
-          topic: sq.topic_snapshot || sq.topic,
-          theme: sq.theme_snapshot || sq.theme || test.payload?.theme_code || "General",
-          theme_code: sq.theme_code || test.payload?.theme_code,
-          category: sq.category_snapshot || sq.category || test.payload?.category || 'vocab',
-          display_order: sq.display_order ?? (idx + 1),
-          answer_type: sq.answer_type || test.answer_type || test.payload?.answer_type || 'spoken',
-          options_snapshot: sq.options_snapshot || [],
-          test_section: sq.test_section || null,
-          section_label: sq.section_label || null,
-          section_id: sq.test_section || 'default',
-          target_demonstrative: sq.target_demonstrative || null,
-          module: sq.module || test.payload?.module || (test.module_type === 'POINT_AND_SPEAK' ? 'description' : null),
-          dynamic_type: sq.dynamic_type || null,
-          is_bonus_round: Boolean(sq.is_bonus_round),
-          fixed_option_order: Boolean(sq.fixed_option_order)
-        },
-        topic_snapshot: sq.topic_snapshot || sq.topic,
-        question_type_snapshot: sq.word_type_snapshot || sq.word_type,
-        accepted_answers_snapshot: sq.accepted_answers_snapshot || sq.accepted_answers,
-        correct_answer_snapshot: Array.isArray(sq.accepted_answers_snapshot || sq.accepted_answers) ? (sq.accepted_answers_snapshot || sq.accepted_answers).join('; ') : String(sq.accepted_answers_snapshot || sq.accepted_answers || ''),
-        student_answer: null,
-        score: 0
-      }));
+      const answerRows = mapQuestionsToAnswerRows(questions, 0);
       const { data: insertedAns, error: ansInsertErr } = await sb.from('attempt_answers')
         .insert(answerRows)
         .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, accepted_answers_snapshot, correct_answer_snapshot, student_answer, score');
@@ -2867,6 +2938,42 @@ export async function startTest(studentId, testId) {
             updated_at: new Date().toISOString()
           }).eq('id', attempt.id);
           attempt.total_questions = scoredTotal;
+        }
+      }
+    }
+  } else if (attempt.status === 'in_progress' && test.payload?.is_dynamic_shell && isFormalExam) {
+    const testCat = String(test.payload?.category || '').toLowerCase();
+    const isUnifiedExam = testCat === 'all' || testCat === 'unified' || test.payload?.is_unified === true || test.payload?.is_unified_test === true || test.test_subtype === 'UNIFIED_TEST';
+    if (isUnifiedExam) {
+      const phraseCountInAns = answers.filter(a => a.question_snapshot?.test_section === 'phrases' || a.question_snapshot?.category === 'phrases').length;
+      const wordCountInAns = answers.length - phraseCountInAns;
+      if (wordCountInAns > 0 && phraseCountInAns > 0 && phraseCountInAns < Math.round(wordCountInAns / 4)) {
+        try {
+          const fullQuestions = await generateTestQuestions(sb, test);
+          const existingQIds = new Set(answers.map(a => a.question_id).filter(Boolean));
+          const existingTexts = new Set(answers.map(a => String(a.question_snapshot?.question_text || '').trim().toLowerCase()).filter(Boolean));
+          const missingPhrases = (fullQuestions || []).filter(q =>
+            q.test_section === 'phrases' &&
+            !(q.question_id && existingQIds.has(q.question_id)) &&
+            !existingTexts.has(String(q.question_text_snapshot || q.question_text || '').trim().toLowerCase())
+          );
+          if (missingPhrases.length > 0) {
+            const maxOrder = answers.reduce((mx, a) => Math.max(mx, Number(a.question_snapshot?.display_order || 0)), answers.length);
+            const missingRows = mapQuestionsToAnswerRows(missingPhrases, maxOrder);
+            const { data: appendedAns, error: appendErr } = await sb.from('attempt_answers')
+              .insert(missingRows)
+              .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, accepted_answers_snapshot, correct_answer_snapshot, student_answer, score');
+            if (!appendErr && appendedAns && appendedAns.length > 0) {
+              answers = [...answers, ...appendedAns];
+              await sb.from('attempts').update({
+                total_questions: answers.length,
+                updated_at: new Date().toISOString()
+              }).eq('id', attempt.id);
+              attempt.total_questions = answers.length;
+            }
+          }
+        } catch (healErr) {
+          console.warn('Non-fatal phrase self-heal skipped:', healErr);
         }
       }
     }
@@ -6713,9 +6820,9 @@ export async function upsertDynamicTestShell(config) {
       } else {
         const th = (themeCode || '').toUpperCase();
         if (th === 'A') expectedQuestions = 200;
-        else if (th === 'B') expectedQuestions = 350;
-        else if (th === 'C') expectedQuestions = 550;
-        else if (th === 'D') expectedQuestions = 750;
+        else if (th === 'B') expectedQuestions = 400;
+        else if (th === 'C') expectedQuestions = 600;
+        else if (th === 'D') expectedQuestions = 800;
         else expectedQuestions = 200;
       }
     } else if (!isTest) {
@@ -7052,6 +7159,8 @@ export async function updateClassTestsConfig(params = {}) {
             phrases_duration_minutes: pDur,
             working_duration_minutes: totalExamDur,
             duration_minutes: totalExamDur,
+            total_questions: wCount + pCount,
+            snapshot_question_count: wCount + pCount,
             question_order: examQuestionOrder
           };
         }

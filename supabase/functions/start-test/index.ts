@@ -927,9 +927,9 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Safety clamp: strictly respect configured total questions bounds (e.g. 40 for task, 120 for exam)
+      // Safety clamp: strictly respect configured total questions bounds for single-category tests (never truncate tail Phrases on Unified dynamic exams)
       const maxTargetQuestions = test.payload?.total_questions || test.total_questions;
-      if (maxTargetQuestions && Number(maxTargetQuestions) > 0 && vaultWords.length > Number(maxTargetQuestions)) {
+      if (!isUnified && maxTargetQuestions && Number(maxTargetQuestions) > 0 && vaultWords.length > Number(maxTargetQuestions)) {
         vaultWords = vaultWords.slice(0, Number(maxTargetQuestions));
       }
 

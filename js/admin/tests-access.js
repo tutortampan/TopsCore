@@ -3081,9 +3081,14 @@ function openThemeLateModal(container, theme, context) {
     modeBadgeEl.textContent = 'EXAM SESSION';
   }
 
-  // Filter ONLY unenrolled batch students who are eligible!
-  const targetBatchId = theme.liveBatchId;
-  const batchStudents = (context.allStudents || []).filter(s => s.batch_id === targetBatchId && !s.deleted_at && s.is_active !== false);
+  // Filter ONLY unenrolled batch students!
+  const targetBatchId = theme.liveBatchId || _selectedBatchId;
+  const studentSource = (context.allStudents && context.allStudents.length > 0) ? context.allStudents : (context.classStudents || []);
+  const batchStudents = studentSource.filter(s =>
+    (!targetBatchId || String(s.batch_id) === String(targetBatchId)) &&
+    !s.deleted_at &&
+    s.is_active !== false
+  );
   const enrolledSet = new Set(theme.allowedStudentIds || []);
 
   // Exclude enrolled students completely!
@@ -3107,11 +3112,12 @@ function openThemeLateModal(container, theme, context) {
 
   let checkedLateIds = new Set();
   let lateSearchQuery = '';
-  let lateOverrideActive = false;
+  // If no strictly-eligible unenrolled students remain, auto-enable Override so tutor can still add late arrivals
+  let lateOverrideActive = eligibleLateList.length === 0 && evaluated.length > 0;
 
   const lateOverrideCheckbox = modal.querySelector('#late-modal-override-checkbox');
   if (lateOverrideCheckbox) {
-    lateOverrideCheckbox.checked = false;
+    lateOverrideCheckbox.checked = lateOverrideActive;
     lateOverrideCheckbox.onchange = () => {
       lateOverrideActive = lateOverrideCheckbox.checked;
       renderLateList();
@@ -3256,6 +3262,9 @@ function openThemeLateModal(container, theme, context) {
       const targetTitle = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
       showToast(`Successfully added ${studentIds.length} late student(s) to ${targetTitle}! (${isRem ? 'Status: REMEDIAL' : 'Status: NORMAL'})`, 'success');
       closeModal();
+      if (window._classHubCache && context?.classId) {
+        delete window._classHubCache[context.classId];
+      }
       if (window.renderClassHub) {
         window.renderClassHub(document.getElementById('admin-content-area'));
       }
