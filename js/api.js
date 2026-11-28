@@ -2035,8 +2035,10 @@ export async function generateTestQuestions(sb, test) {
       }
     }
 
-    // Safety clamp: strictly respect configured total questions bounds for single-category tests (never truncate tail Phrases on Unified dynamic exams)
-    const maxTargetQuestions = test.payload?.total_questions || test.total_questions;
+    // Dynamic Vault shells pull all matching Vault items unless a custom_question_limit is explicitly configured
+    const maxTargetQuestions = test.payload?.custom_question_limit
+      ? Number(test.payload.custom_question_limit)
+      : (!test.payload?.is_dynamic_shell ? (test.payload?.total_questions || test.total_questions) : 0);
     if (!isUnified && maxTargetQuestions && Number(maxTargetQuestions) > 0 && vaultWords.length > Number(maxTargetQuestions)) {
       vaultWords = vaultWords.slice(0, Number(maxTargetQuestions));
     }
@@ -3307,20 +3309,23 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       const nowIso = new Date().toISOString();
 
       // In partial submissions (e.g. Words vs Phrases component tests), batch-reset unsubmitted sibling questions
-      // in a single query instead of sequential per-row updates.
-      let resetUnsubmittedPromise = null;
+      // in chunked .in() queries (max 80 UUIDs per request to stay safely under URL length limits).
+      const resetUnsubmittedPromises = [];
       if (isPartialSubmit && attAnsList && attAnsList.length > 0) {
         const unsubmittedIdsToReset = attAnsList
           .filter(r => !submittedIds.has(r.id) && (r.evaluation_result != null || r.score != null))
           .map(r => r.id);
-        if (unsubmittedIdsToReset.length > 0) {
-          resetUnsubmittedPromise = sb.from('attempt_answers').update({
-            student_answer: null,
-            score: null,
-            is_correct: null,
-            evaluation_result: null,
-            updated_at: nowIso
-          }).in('id', unsubmittedIdsToReset);
+        for (let i = 0; i < unsubmittedIdsToReset.length; i += 80) {
+          const chunk = unsubmittedIdsToReset.slice(i, i + 80);
+          resetUnsubmittedPromises.push(
+            sb.from('attempt_answers').update({
+              student_answer: null,
+              score: null,
+              is_correct: null,
+              evaluation_result: null,
+              updated_at: nowIso
+            }).in('id', chunk)
+          );
         }
       }
 
@@ -3333,8 +3338,7 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       let newScore = 0;
       let newCorrect = 0;
 
-      const rescoreUpdatePromises = [];
-      if (resetUnsubmittedPromise) rescoreUpdatePromises.push(resetUnsubmittedPromise);
+      const rescoreUpdatePromises = [...resetUnsubmittedPromises];
 
       for (const r of scoredList) {
         if ((r.score || 0) >= 1) {
@@ -3407,6 +3411,10 @@ export async function submitTest(attemptId, answersMap, options = {}) {
             updated_at: new Date().toISOString()
           })
           .eq('id', attemptId);
+        if (result) {
+          result.effective_score = effPct;
+          result.grade = remGrade;
+        }
       }
     }
   } catch (remedialErr) {
@@ -3641,7 +3649,11 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
       }
     }
 
-        // Fetch all pages to overcome 1000 row limit
+        // Fetch all pages to overcome 1000 row limit (deterministic order prevents skipped rows across pages)
+    const hasIdCol = normTable === 'attempts' || (!normTable.startsWith('v_') && normTable !== 'class_levels' && (select === '*' || /\bid\b/.test(select)));
+    if (hasIdCol) {
+      query = query.order('id', { ascending: true });
+    }
     let allData = [];
     let from = 0;
     const pageSize = 1000;
@@ -6465,9 +6477,15 @@ export async function adminApplyForgiven({
           targetAtt.forgiven_reason = manualReason;
           targetAtt.updated_at = nowIso;
 
-          // Demote any other attempts for this test
+          // Demote any other attempts for this test (section-aware so Words override doesn't demote Phrases and vice-versa)
           existingAtts.forEach(att => {
             if (att.id !== targetAtt.id && att.is_best_score) {
+              const attFr = String(att.forgiven_reason || '');
+              const attTq = Number(att.total_questions || 0);
+              const isAttWords = attFr.includes('[SECTION: WORDS]') || (attTq > 40 && attTq <= 160);
+              const isAttPhrases = attFr.includes('[SECTION: PHRASES]') || (attTq > 0 && attTq <= 40);
+              if (section === 'words' && isAttPhrases) return;
+              if (section === 'phrases' && isAttWords) return;
               updates.push({ id: att.id, is_best_score: false, updated_at: nowIso });
             }
           });
@@ -6500,9 +6518,15 @@ export async function adminApplyForgiven({
           inserts.push(newAtt);
           existingAtts.push(newAtt);
 
-          // Demote existing attempts
+          // Demote existing attempts (section-aware)
           existingAtts.forEach(att => {
             if (att.id !== newAtt.id && att.is_best_score) {
+              const attFr = String(att.forgiven_reason || '');
+              const attTq = Number(att.total_questions || 0);
+              const isAttWords = attFr.includes('[SECTION: WORDS]') || (attTq > 40 && attTq <= 160);
+              const isAttPhrases = attFr.includes('[SECTION: PHRASES]') || (attTq > 0 && attTq <= 40);
+              if (section === 'words' && isAttPhrases) return;
+              if (section === 'phrases' && isAttWords) return;
               updates.push({ id: att.id, is_best_score: false, updated_at: nowIso });
             }
           });
@@ -6859,7 +6883,11 @@ export async function upsertDynamicTestShell(config) {
     : 40;
   if (!config.totalQuestions) {
     if (levelNum === 0) {
-      expectedQuestions = isUnified ? 50 : 40;
+      if (isTest) {
+        expectedQuestions = isUnified ? 150 : (isPhrase ? 30 : 120);
+      } else {
+        expectedQuestions = isUnified ? 50 : (isPhrase ? 10 : 30);
+      }
     } else if (isUnified) {
       if (!isTest) {
         expectedQuestions = 50;

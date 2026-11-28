@@ -2067,7 +2067,20 @@ if (typeof window !== 'undefined') {
                   return new Date(y.submitted_at || y.created_at || 0) - new Date(x.submitted_at || x.created_at || 0);
                 });
                 const topAtt = submittedAtts[0];
-                const markedBest = submittedAtts.find(a => a.is_best_score === true);
+                const markedBestList = submittedAtts.filter(a => a.is_best_score === true);
+                if (markedBestList.length > 1) {
+                  markedBestList.sort((x, y) => {
+                    const xMan = /MANUAL_OVERRIDE/i.test(String(x.forgiven_reason || '')) ? 1 : 0;
+                    const yMan = /MANUAL_OVERRIDE/i.test(String(y.forgiven_reason || '')) ? 1 : 0;
+                    if (yMan !== xMan) return yMan - xMan;
+                    const tDiff = new Date(y.forgiven_at || y.updated_at || y.submitted_at || y.created_at || 0) - new Date(x.forgiven_at || x.updated_at || x.submitted_at || x.created_at || 0);
+                    if (tDiff !== 0) return tDiff;
+                    const pctX = Number(x.percentage ?? (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
+                    const pctY = Number(y.percentage ?? (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
+                    return pctY - pctX;
+                  });
+                }
+                const markedBest = markedBestList[0] || null;
                 const isManualOverrideBest = Boolean(markedBest && /MANUAL_OVERRIDE/i.test(String(markedBest.forgiven_reason || '')));
                 const topPct = Number(topAtt.percentage ?? (Number(topAtt.total_questions || maxQ) > 0 ? (Math.min(Number(topAtt.score ?? 0), Number(topAtt.total_questions || maxQ)) / Number(topAtt.total_questions || maxQ)) * 100 : 0));
                 const markedPct = markedBest ? Number(markedBest.percentage ?? (Number(markedBest.total_questions || maxQ) > 0 ? (Math.min(Number(markedBest.score ?? 0), Number(markedBest.total_questions || maxQ)) / Number(markedBest.total_questions || maxQ)) * 100 : 0)) : -1;
@@ -2318,6 +2331,7 @@ if (typeof window !== 'undefined') {
             asmWordsPassCounts,
             asmPhrasesPassCounts,
             allAttempts: studentAttempts,
+            _validExamEntries: validExamEntries,
             activeThemeCode: mastery.activeThemeCode || null,
             includedThemeCodes: mastery.includedThemeCodes || [],
             includedExamIds: mastery.includedExamIds || new Set(),
@@ -2328,6 +2342,41 @@ if (typeof window !== 'undefined') {
             ...rowScoreSortVals,
             _raw: s
           };
+        });
+
+        // Class-Peer Baseline (scoped strictly per Batch): When any classmate in the same batch completes an exam, unattempted classmates start at 0%
+        const batchReachedExamMap = new Map();
+        studentsGridData.forEach(r => {
+          const bKey = String(r._raw?.batch_id || r.batchName || 'ALL');
+          if (!batchReachedExamMap.has(bKey)) batchReachedExamMap.set(bKey, new Map());
+          const bMap = batchReachedExamMap.get(bKey);
+          (r._validExamEntries || []).forEach(e => {
+            const eid = e.test?.id || e.testId || e.test_id;
+            if (eid && !bMap.has(eid)) {
+              bMap.set(eid, Number(e.totalQ || 120));
+            }
+          });
+        });
+        studentsGridData.forEach(r => {
+          const bKey = String(r._raw?.batch_id || r.batchName || 'ALL');
+          const bMap = batchReachedExamMap.get(bKey);
+          if (!bMap || bMap.size === 0) return;
+          const entryById = new Map();
+          (r._validExamEntries || []).forEach(e => {
+            const eid = e.test?.id || e.testId || e.test_id;
+            if (eid) entryById.set(eid, e);
+          });
+          let sumPct = 0;
+          bMap.forEach((_, eid) => {
+            const e = entryById.get(eid);
+            sumPct += e ? Number(e.effPct ?? 0) : 0;
+          });
+          r.averageScorePct = Math.round(sumPct / bMap.size);
+          r.overallPct = r.averageScorePct;
+          r.curriculumGradePct = r.averageScorePct;
+          r.grade = typeof calculateGrade === 'function' ? calculateGrade(r.averageScorePct) : r.grade;
+          r.gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(r.averageScorePct) : r.gradeColor;
+          r._hasClassReachedBaseline = true;
         });
 
         // Leaderboard Sort Order (Milestone Exam Progress-First Primary, Total Points Secondary per User Specification):
@@ -4916,8 +4965,17 @@ if (typeof window !== 'undefined') {
 
                   const pickBestSectionAtt = (list) => {
                     if (!list || list.length === 0) return null;
-                    const manualBest = list.find(a => a.is_best_score === true && /MANUAL_OVERRIDE/i.test(String(a.forgiven_reason || '')));
-                    if (manualBest) return manualBest;
+                    const manualBests = list.filter(a => a.is_best_score === true && /MANUAL_OVERRIDE/i.test(String(a.forgiven_reason || '')));
+                    if (manualBests.length > 0) {
+                      manualBests.sort((x, y) => {
+                        const tDiff = new Date(y.forgiven_at || y.updated_at || y.submitted_at || y.created_at || 0) - new Date(x.forgiven_at || x.updated_at || x.submitted_at || x.created_at || 0);
+                        if (tDiff !== 0) return tDiff;
+                        const pctX = Number(x.percentage != null ? x.percentage : (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
+                        const pctY = Number(y.percentage != null ? y.percentage : (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
+                        return pctY - pctX;
+                      });
+                      return manualBests[0];
+                    }
                     const sorted = [...list].sort((x, y) => {
                       const pctX = Number(x.percentage != null ? x.percentage : (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
                       const pctY = Number(y.percentage != null ? y.percentage : (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
@@ -4927,12 +4985,15 @@ if (typeof window !== 'undefined') {
                     return sorted[0] || null;
                   };
 
+                  const expectedThemeWordsQ = tc === 'B' ? 320 : tc === 'C' ? 480 : tc === 'D' ? 640 : 160;
+                  const expectedThemePhrasesQ = expectedThemeWordsQ / 4;
+
                   // A. Words attempts
                   const wordsAtts = studentExamAtts.filter(a => {
                     const fr = String(a.forgiven_reason || '');
                     const tQ = Number(a.total_questions || 0);
                     if (fr.includes('[SECTION: PHRASES]')) return false;
-                    return fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160);
+                    return fr.includes('[SECTION: WORDS]') || (tQ > expectedThemePhrasesQ && tQ <= expectedThemeWordsQ);
                   });
                   const bestWords = pickBestSectionAtt(wordsAtts);
 
@@ -4941,78 +5002,100 @@ if (typeof window !== 'undefined') {
                     const fr = String(a.forgiven_reason || '');
                     const tQ = Number(a.total_questions || 0);
                     if (fr.includes('[SECTION: WORDS]')) return false;
-                    return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40);
+                    return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= expectedThemePhrasesQ);
                   });
                   const bestPhrases = pickBestSectionAtt(phrasesAtts);
 
-                  // C. Full 200Q attempts fallback
-                  const fullAtts = studentExamAtts.filter(a => Number(a.total_questions || 0) > 160);
+                  // C. Full Unified attempts fallback (strictly untagged full attempts > expectedThemeWordsQ)
+                  const fullAtts = studentExamAtts.filter(a => {
+                    const fr = String(a.forgiven_reason || '');
+                    if (fr.includes('[SECTION: WORDS]') || fr.includes('[SECTION: PHRASES]')) return false;
+                    return Number(a.total_questions || 0) > expectedThemeWordsQ;
+                  });
                   const bestFull = pickBestSectionAtt(fullAtts);
 
-                  let wordsRate = null, wordsPts = null;
-                  let phrasesRate = null, phrasesPts = null;
+                  let wordsRate = null, wordsPts = null, wordsQ = null;
+                  let phrasesRate = null, phrasesPts = null, phrasesQ = null;
                   let accPts = null, accRate = null;
 
                   // Candidate words: pick highest between words-only attempt and full attempt
                   const candidateWords = [];
                   if (bestWords) {
-                    const bPct = Number(bestWords.percentage != null ? bestWords.percentage : (bestWords.total_questions ? (bestWords.score / bestWords.total_questions) * 100 : 0));
+                    const bQ = Number(bestWords.total_questions || expectedThemeWordsQ);
+                    const bPct = Number(bestWords.percentage != null ? bestWords.percentage : (bQ ? (bestWords.score / bQ) * 100 : 0));
                     const bPts = bestWords.total_questions === 160 ? Math.round(Number(bestWords.score || 0)) : Math.round(160 * (bPct / 100));
+                    const normWPts = bQ === expectedThemeWordsQ ? Math.round(Number(bestWords.score || 0)) : Math.round(expectedThemeWordsQ * (bPct / 100));
                     candidateWords.push({
-                      pts: bPts,
-                      pct: Math.round(bPct)
+                      pts: expectedThemeWordsQ === 160 ? bPts : normWPts,
+                      pct: Math.round(bPct),
+                      q: expectedThemeWordsQ
                     });
                   }
                   if (bestFull) {
-                    const wSc = Math.min(160, Number(bestFull.score || 0));
+                    const fullQ = Number(bestFull.total_questions || expectedThemeWordsQ);
+                    const wQ = Math.min(fullQ, expectedThemeWordsQ);
+                    const wSc = Math.min(wQ, Number(bestFull.score || 0));
                     candidateWords.push({
                       pts: Math.round(wSc),
-                      pct: Math.round((wSc / 160) * 100)
+                      pct: wQ > 0 ? Math.round((wSc / wQ) * 100) : 0,
+                      q: expectedThemeWordsQ
                     });
                   }
                   if (candidateWords.length > 0) {
                     candidateWords.sort((a, b) => b.pts - a.pts);
                     wordsPts = candidateWords[0].pts;
                     wordsRate = candidateWords[0].pct;
+                    wordsQ = candidateWords[0].q;
                   }
 
                   // Candidate phrases: pick highest between phrases-only attempt and full attempt
                   const candidatePhrases = [];
                   if (bestPhrases) {
-                    const bPct = Number(bestPhrases.percentage != null ? bestPhrases.percentage : (bestPhrases.total_questions ? (bestPhrases.score / bestPhrases.total_questions) * 100 : 0));
+                    const pQ = Number(bestPhrases.total_questions || expectedThemePhrasesQ);
+                    const bPct = Number(bestPhrases.percentage != null ? bestPhrases.percentage : (pQ ? (bestPhrases.score / pQ) * 100 : 0));
                     const bPts = bestPhrases.total_questions === 40 ? Math.round(Number(bestPhrases.score || 0)) : Math.round(40 * (bPct / 100));
+                    const normPPts = pQ === expectedThemePhrasesQ ? Math.round(Number(bestPhrases.score || 0)) : Math.round(expectedThemePhrasesQ * (bPct / 100));
                     candidatePhrases.push({
-                      pts: bPts,
-                      pct: Math.round(bPct)
+                      pts: expectedThemePhrasesQ === 40 ? bPts : normPPts,
+                      pct: Math.round(bPct),
+                      q: expectedThemePhrasesQ
                     });
                   }
-                  if (bestFull && Number(bestFull.score || 0) > 160) {
-                    const pSc = Math.min(40, Number(bestFull.score || 0) - 160);
+                  if (bestFull && Number(bestFull.total_questions || 0) > expectedThemeWordsQ) {
+                    const pQ = Math.max(0, Number(bestFull.total_questions || 0) - expectedThemeWordsQ);
+                    const pSc = Math.max(0, Math.min(pQ, Number(bestFull.score || 0) - expectedThemeWordsQ));
+                    const pPct = pQ > 0 ? Math.round((pSc / pQ) * 100) : 0;
+                    const normFullPPts = pQ === expectedThemePhrasesQ ? Math.round(pSc) : Math.round(expectedThemePhrasesQ * (pPct / 100));
                     candidatePhrases.push({
-                      pts: Math.round(pSc),
-                      pct: Math.round((pSc / 40) * 100)
+                      pts: normFullPPts,
+                      pct: pPct,
+                      q: expectedThemePhrasesQ
                     });
                   }
                   if (candidatePhrases.length > 0) {
                     candidatePhrases.sort((a, b) => b.pts - a.pts);
                     phrasesPts = candidatePhrases[0].pts;
                     phrasesRate = candidatePhrases[0].pct;
+                    phrasesQ = candidatePhrases[0].q;
                   }
 
                   const hasAnyExamAtt = (wordsPts != null || phrasesPts != null);
                   if (hasAnyExamAtt) {
                     accPts = (wordsPts || 0) + (phrasesPts || 0);
-                    accRate = Math.round((accPts / 200) * 100);
+                    const accMaxQ = (wordsQ || expectedThemeWordsQ) + (phrasesQ || (expectedThemeWordsQ / 4));
+                    accRate = accMaxQ > 0 ? Math.round((accPts / accMaxQ) * 100) : 0;
                   }
 
                   row[`theme_${tc}_words_pts`] = wordsPts;
                   row[`theme_${tc}_words_rate`] = wordsRate;
+                  row[`theme_${tc}_words_q`] = wordsQ;
                   row[`theme_${tc}_phrases_pts`] = phrasesPts;
                   row[`theme_${tc}_phrases_rate`] = phrasesRate;
+                  row[`theme_${tc}_phrases_q`] = phrasesQ;
                   row[`theme_${tc}_total_pts`] = hasAnyExamAtt ? accPts : -1;
                   row[`theme_${tc}_score`] = hasAnyExamAtt ? accRate : -1;
                   row[`theme_${tc}_grade`] = hasAnyExamAtt ? accRate : -1;
-                  row[`theme_${tc}_max_q`] = 200;
+                  row[`theme_${tc}_max_q`] = expectedThemeWordsQ + expectedThemePhrasesQ;
                   row[`theme_${tc}_has_exam_att`] = hasAnyExamAtt;
                 } else {
                   let themeEarned = 0;
@@ -5095,6 +5178,28 @@ if (typeof window !== 'undefined') {
               });
             });
 
+            // Class-Peer Baseline (scoped strictly per Batch): When any classmate in the same batch reaches/unlocks or completes a theme, unattempted classmates in that batch start at 0
+            const batchReachedThemesMap = new Map();
+            const themeMaxQMap = {};
+            sortedActiveThemes.forEach(tc => {
+              studentsGridData.forEach(r => {
+                const bKey = String(r._raw?.batch_id || r.batchName || 'ALL');
+                if (!batchReachedThemesMap.has(bKey)) batchReachedThemesMap.set(bKey, new Set());
+                const isRowReached = Boolean(
+                  r[`theme_${tc}_has_exam_att`] ||
+                  (Number(r[`theme_${tc}_task_max`] || 0) > 0 && r[`theme_${tc}_task_completed`])
+                );
+                if (isRowReached) batchReachedThemesMap.get(bKey).add(tc);
+              });
+              const sampleRow = studentsGridData.find(r => r[`theme_${tc}_max_q`] != null && Number(r[`theme_${tc}_max_q`]) > 0);
+              if (sampleRow) {
+                themeMaxQMap[tc] = Number(sampleRow[`theme_${tc}_max_q`]);
+              } else {
+                const fallbackW = tc === 'B' ? 320 : tc === 'C' ? 480 : tc === 'D' ? 640 : 160;
+                themeMaxQMap[tc] = isLevel2Vocab ? (tc === 'B' ? 280 : tc === 'C' ? 480 : tc === 'D' ? 640 : 120) : (fallbackW + (fallbackW / 4));
+              }
+            });
+
             // Calibrate master milestone progression progressPct and tooltip
             studentsGridData.forEach(row => {
               const totalExams = allClassExams.length || 8;
@@ -5102,23 +5207,41 @@ if (typeof window !== 'undefined') {
               row.progressStr = `${row.progressPct}%`;
               row.progressTooltip = `${row.completedExamCount || 0}/${totalExams} Milestone Exams Done (${row.progressPct}%)`;
 
-              // Recalculate totalEarnedScore from theme accumulative exam points across active themes
+              // Recalculate totalEarnedScore from theme accumulative exam points across batch-reached themes
+              const bKey = String(row._raw?.batch_id || row.batchName || 'ALL');
+              const batchReachedThemes = batchReachedThemesMap.get(bKey) || new Set();
               let totalThemePts = 0;
               let totalThemePossible = 0;
               let hasAnyThemeExam = false;
-              sortedActiveThemes.forEach(tc => {
+              const evalThemes = batchReachedThemes.size > 0 ? sortedActiveThemes.filter(tc => batchReachedThemes.has(tc)) : sortedActiveThemes;
+              evalThemes.forEach(tc => {
+                const maxQ = Number(row[`theme_${tc}_max_q`] || themeMaxQMap[tc] || 200);
                 if (row[`theme_${tc}_has_exam_att`] && row[`theme_${tc}_total_pts`] != null && row[`theme_${tc}_total_pts`] >= 0) {
                   hasAnyThemeExam = true;
                   totalThemePts += Number(row[`theme_${tc}_total_pts`]);
-                  totalThemePossible += Number(row[`theme_${tc}_max_q`] || 200);
+                  totalThemePossible += maxQ;
+                } else if (batchReachedThemes.has(tc)) {
+                  totalThemePossible += maxQ;
+                  row[`theme_${tc}_words_rate`] = 0;
+                  row[`theme_${tc}_words_pts`] = 0;
+                  row[`theme_${tc}_phrases_rate`] = 0;
+                  row[`theme_${tc}_phrases_pts`] = 0;
+                  row[`theme_${tc}_total_pts`] = 0;
+                  row[`theme_${tc}_score`] = 0;
+                  row[`theme_${tc}_max_q`] = maxQ;
+                  row[`theme_${tc}_baseline_zero`] = true;
                 }
               });
-              if (hasAnyThemeExam) {
+              if (hasAnyThemeExam || batchReachedThemes.size > 0) {
                 row.totalEarnedScore = Math.round(totalThemePts);
                 if (totalThemePossible > 0) {
                   const themeAvgPct = Math.round((totalThemePts / totalThemePossible) * 100);
                   row.averageScorePct = themeAvgPct;
+                  row.overallPct = themeAvgPct;
+                  row.curriculumGradePct = themeAvgPct;
                   row.grade = typeof calculateGrade === 'function' ? calculateGrade(themeAvgPct) : row.grade;
+                  row.gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(themeAvgPct) : row.gradeColor;
+                  row._hasClassReachedBaseline = true;
                 }
               }
             });
@@ -5192,7 +5315,7 @@ if (typeof window !== 'undefined') {
             const isTopicOverview = selectedTopic === 'ALL' || selectedTopic === 'OVERVIEW';
 
             if (isOverviewMode) {
-              // Master Overview Super-Headers (8 cols for Vocab with Phrases or 5 cols per active theme + 3 cols OVERALL)
+              // Master Overview Super-Headers (6 cols for Vocab with Phrases: W-PTS, P-PTS, ACC, Q, GRD, STS; or 4 cols per active theme + 3 cols OVERALL)
               sortedActiveThemes.forEach(tc => {
                 const tName = themeNames[tc] ? ` (${themeNames[tc].toUpperCase()})` : '';
                 const asmsInTheme = themeGroups[tc] || [];
@@ -5201,7 +5324,7 @@ if (typeof window !== 'undefined') {
                 const themeHasExamPhrases = isVocab && !isLevel2Vocab && (checkThemeHasPhrases(taskAsms) || examAsms.some(e => e.payload?.is_unified || e.payload?.category === 'phrases' || /PHRASE/i.test(e.shell_code || e.title || '')));
                 dynamicSuperHeaders.push({
                   label: `THEME ${tc}${tName}`,
-                  colSpan: themeHasExamPhrases ? 8 : 5,
+                  colSpan: themeHasExamPhrases ? 6 : 4,
                   className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`,
                   style: themeStyles[tc] || ''
                 });
@@ -5222,10 +5345,17 @@ if (typeof window !== 'undefined') {
               tCodes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
               if (isTopicOverview) {
-                // Mode 2: General Theme Overview (1 summary column per topic)
+                // Mode 2: General Theme Overview (split into Words & Phrases columns per topic when topic has phrases)
+                const topicOverviewColCount = tCodes.reduce((sum, topCode) => {
+                  const matchingTasks = taskAsmsInTheme.filter(a =>
+                    String(a.payload?.topic_code || '').toUpperCase() === topCode.toUpperCase() ||
+                    (a.shell_code && a.shell_code.includes(topCode))
+                  );
+                  return sum + (checkTopicHasPhrases(matchingTasks) ? 2 : 1);
+                }, 0);
                 dynamicSuperHeaders.push({
                   label: `THEME ${activeThemeCode}${tName} - TOPICS OVERVIEW`,
-                  colSpan: tCodes.length,
+                  colSpan: topicOverviewColCount,
                   className: themeColorClasses[activeThemeCode] || `super-hdr super-hdr-theme super-hdr-theme-${activeThemeCode.toLowerCase()}`,
                   style: themeStyles[activeThemeCode] || ''
                 });
@@ -5253,7 +5383,7 @@ if (typeof window !== 'undefined') {
               const activeExamHasPhrases = isVocab && !isLevel2Vocab && (examAsmsInTheme.some(e => e.payload?.is_unified || e.payload?.category === 'phrases' || /PHRASE/i.test(e.shell_code || e.title || '')) || checkThemeHasPhrases(taskAsmsInTheme));
               dynamicSuperHeaders.push({
                 label: `THEME ${activeThemeCode}${tName} EXAM`,
-                colSpan: activeExamHasPhrases ? 7 : 4,
+                colSpan: activeExamHasPhrases ? 9 : 4,
                 className: `${themeColorClasses[activeThemeCode] || 'super-hdr super-hdr-theme'} super-hdr-exam super-hdr-exam-${activeThemeCode.toLowerCase()}`,
                 style: themeStyles[activeThemeCode] || 'background: #0b1120 !important;'
               });
@@ -5287,62 +5417,9 @@ if (typeof window !== 'undefined') {
               }
               topicCodes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-              // 1. In Overview Mode: render single summary TASK column; in Detail Mode: render 7x7 attempt rate columns per topic
+              // 1. In Overview Mode: omit TASK % column (points-focused); in Detail Mode: render topic summary or 7x7 attempt rate columns per topic
               if (isOverviewMode) {
-                dynamicAsmCols.push({
-                  key: `theme_${tc}_task`,
-                  className: `col-asm col-task col-theme-task col-theme-task-${tc.toLowerCase()}`,
-                  width: '58px',
-                  minWidth: '48px',
-                  headerTitle: `Theme ${tc} Task Progress Percentage (0-100%)`,
-                  title: `Theme ${tc} Tasks %`,
-                  label: 'TASK %',
-                  shortLabel: 'TASK %',
-                  microLabel: 'TASK %',
-                  sortable: true,
-                  align: 'center',
-                  render: (val, row) => {
-                    const isManualMode = Boolean(window._classManualScoreEditMode);
-                    const earned = row[`theme_${tc}_task_progress`] || 0;
-                    const maxT = row[`theme_${tc}_task_max`] || 0;
-                    const isComplete = Boolean(row[`theme_${tc}_task_completed`]);
-                    const pct = maxT > 0 ? Math.min(100, Math.round((earned / maxT) * 100)) : 0;
-
-                    if (isManualMode && maxT > 0) {
-                      const taskKey = `task_${tc}`;
-                      const currentDraft = window._manualInputState?.drafts?.[row.id]?.[taskKey];
-                      const displayVal = currentDraft?.earned != null ? currentDraft.earned : earned;
-                      return `
-                        <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
-                          <input type="number" min="0" max="${maxT}" step="1"
-                                 class="input-matrix-task-progress input-matrix-task-progress-${row.id}-${tc.toLowerCase()}"
-                                 data-student-id="${row.id}"
-                                 data-theme-code="${tc}"
-                                 data-max-tasks="${maxT}"
-                                 data-original-earned="${earned}"
-                                 value="${displayVal}"
-                                 placeholder="${maxT}"
-                                 oninput="window.onMatrixTaskChange('${row.id}', '${tc}', ${maxT}, this.value)"
-                                 onkeydown="if(event.key==='Enter'){this.blur();}"
-                                 onclick="event.stopPropagation();"
-                                 style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#38bdf8; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
-                        </div>
-                      `;
-                    }
-
-                    if (maxT === 0) return '<span class="asm-dot" style="font-size:12px; font-weight:700;" title="No tasks required">&middot;</span>';
-                    const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (isComplete ? 'var(--grade-a)' : (pct >= 60 ? 'var(--grade-c)' : (pct > 0 ? 'var(--grade-d)' : '#64748b')));
-                    return `
-                      <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
-                           ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
-                           title="Theme ${tc} Tasks: ${pct}% (${earned}/${maxT} reps)${isComplete ? ' — Completed' : ''} - Double click to edit">
-                        <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:700; color:${color}; font-variant-numeric:tabular-nums;">
-                          ${pct}%
-                        </span>
-                      </div>
-                    `;
-                  }
-                });
+                // Intentionally omitted in Overview Mode
               } else if (isTopicOverview) {
                 // Mode 2: General Theme Overview (1 summary column per topic in active theme)
                 topicCodes.forEach((topCode, topIdx) => {
@@ -5353,47 +5430,31 @@ if (typeof window !== 'undefined') {
                   const topName = topicNames[topCode.toUpperCase()] || topicNames[topCode] || '';
                   const hasPhrases = checkTopicHasPhrases(matchingTasks);
                   const maxTopicReps = hasPhrases ? (compTargetReps * 2) : compTargetReps;
-                  const isEndCol = topIdx === topicCodes.length - 1;
+                  const isLastTopic = topIdx === topicCodes.length - 1;
 
-                  dynamicAsmCols.push({
-                    key: `theme_${tc}_topic_${topCode}_summary`,
-                    className: `col-asm col-task col-theme-topic-summary col-theme-topic-${tc.toLowerCase()}${isEndCol ? ' col-theme-topic-att-end' : ''}`,
-                    width: '65px',
-                    minWidth: '55px',
-                    headerTitle: `Topic ${topCode}: ${topName} (Click to inspect detailed attempts)`,
-                    title: topCode,
-                    label: topCode,
-                    shortLabel: topCode,
-                    microLabel: topCode,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
+                  if (hasPhrases) {
+                    const renderSplitTopicCell = (row, comp) => {
                       const isManualMode = Boolean(window._classManualScoreEditMode);
-                      let earned = 0;
-                      if (hasPhrases) {
-                        earned = (row[`theme_${tc}_topic_${topCode}_words_reps`] || 0) + (row[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0);
-                      } else {
-                        earned = row[`theme_${tc}_topic_${topCode}_reps`] || 0;
-                      }
+                      const earned = row[`theme_${tc}_topic_${topCode}_${comp}_reps`] || 0;
+                      const compLabel = comp === 'words' ? 'Words' : 'Phrases';
 
-                      if (isManualMode && maxTopicReps > 0) {
-                        const taskKey = `task_${tc}_${topCode}`;
-                        const currentDraft = window._manualInputState?.drafts?.[row.id]?.[taskKey] ||
-                                             window._manualInputState?.drafts?.[row.id]?.[`${taskKey}_words`] ||
-                                             window._manualInputState?.drafts?.[row.id]?.[`${taskKey}_phrases`];
+                      if (isManualMode && compTargetReps > 0) {
+                        const taskKey = `task_${tc}_${topCode}_${comp}`;
+                        const currentDraft = window._manualInputState?.drafts?.[row.id]?.[taskKey];
                         const displayVal = currentDraft?.reps != null ? currentDraft.reps : earned;
                         return `
                           <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
-                            <input type="number" min="0" max="${maxTopicReps}" step="1"
-                                   class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}"
+                            <input type="number" min="0" max="${compTargetReps}" step="1"
+                                   class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}-${comp}"
                                    data-student-id="${row.id}"
                                    data-theme-code="${tc}"
                                    data-topic-code="${topCode}"
-                                   data-target-reps="${maxTopicReps}"
+                                   data-comp="${comp}"
+                                   data-target-reps="${compTargetReps}"
                                    data-original-reps="${earned}"
                                    value="${displayVal}"
-                                   placeholder="${maxTopicReps}"
-                                   oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${maxTopicReps}, this.value)"
+                                   placeholder="${compTargetReps}"
+                                   oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${compTargetReps}, this.value, '${comp}')"
                                    onkeydown="if(event.key==='Enter'){this.blur();}"
                                    onclick="event.stopPropagation();"
                                    style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#38bdf8; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
@@ -5401,8 +5462,8 @@ if (typeof window !== 'undefined') {
                         `;
                       }
 
-                      const pct = maxTopicReps > 0 ? Math.round((earned / maxTopicReps) * 100) : 0;
-                      const isComplete = earned >= maxTopicReps && maxTopicReps > 0;
+                      const pct = compTargetReps > 0 ? Math.round((earned / compTargetReps) * 100) : 0;
+                      const isComplete = earned >= compTargetReps && compTargetReps > 0;
                       const color = earned === 0
                         ? '#64748b'
                         : (typeof getGradeColorByScore === 'function'
@@ -5412,33 +5473,138 @@ if (typeof window !== 'undefined') {
                         <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
                              onclick="event.stopPropagation(); window.switchClassAttendanceTopic('${topCode}');"
                              ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
-                             title="Topic ${topCode} (${topName}): ${earned}/${maxTopicReps} reps completed - Click to inspect detailed attempts">
+                             title="Topic ${topCode} (${topName}) ${compLabel}: ${earned}/${compTargetReps} reps completed - Click to inspect detailed attempts">
                           <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:700; color:${color}; font-variant-numeric:tabular-nums;">
-                            ${earned}/${maxTopicReps}
+                            ${earned}/${compTargetReps}
                           </span>
                         </div>
                       `;
-                    }
-                  });
+                    };
+
+                    dynamicAsmCols.push({
+                      key: `theme_${tc}_topic_${topCode}_words_summary`,
+                      className: `col-asm col-task col-theme-topic-summary col-theme-topic-words-summary col-theme-topic-${tc.toLowerCase()}`,
+                      width: '54px',
+                      minWidth: '46px',
+                      headerTitle: `Topic ${topCode} Words: ${topName} (Click to inspect detailed attempts)`,
+                      title: `${topCode}-W`,
+                      label: `${topCode}-W`,
+                      shortLabel: `${topCode}-W`,
+                      microLabel: `${topCode}-W`,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => renderSplitTopicCell(row, 'words')
+                    });
+
+                    dynamicAsmCols.push({
+                      key: `theme_${tc}_topic_${topCode}_phrases_summary`,
+                      className: `col-asm col-task col-theme-topic-summary col-theme-topic-phrases-summary col-theme-topic-${tc.toLowerCase()}${isLastTopic ? ' col-theme-topic-att-end' : ''}`,
+                      width: '54px',
+                      minWidth: '46px',
+                      headerTitle: `Topic ${topCode} Phrases: ${topName} (Click to inspect detailed attempts)`,
+                      title: `${topCode}-P`,
+                      label: `${topCode}-P`,
+                      shortLabel: `${topCode}-P`,
+                      microLabel: `${topCode}-P`,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => renderSplitTopicCell(row, 'phrases')
+                    });
+                  } else {
+                    const isEndCol = isLastTopic;
+                    dynamicAsmCols.push({
+                      key: `theme_${tc}_topic_${topCode}_summary`,
+                      className: `col-asm col-task col-theme-topic-summary col-theme-topic-${tc.toLowerCase()}${isEndCol ? ' col-theme-topic-att-end' : ''}`,
+                      width: '65px',
+                      minWidth: '55px',
+                      headerTitle: `Topic ${topCode}: ${topName} (Click to inspect detailed attempts)`,
+                      title: topCode,
+                      label: topCode,
+                      shortLabel: topCode,
+                      microLabel: topCode,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => {
+                        const isManualMode = Boolean(window._classManualScoreEditMode);
+                        const earned = row[`theme_${tc}_topic_${topCode}_reps`] || 0;
+
+                        if (isManualMode && maxTopicReps > 0) {
+                          const taskKey = `task_${tc}_${topCode}`;
+                          const currentDraft = window._manualInputState?.drafts?.[row.id]?.[taskKey];
+                          const displayVal = currentDraft?.reps != null ? currentDraft.reps : earned;
+                          return `
+                            <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                              <input type="number" min="0" max="${maxTopicReps}" step="1"
+                                     class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}"
+                                     data-student-id="${row.id}"
+                                     data-theme-code="${tc}"
+                                     data-topic-code="${topCode}"
+                                     data-target-reps="${maxTopicReps}"
+                                     data-original-reps="${earned}"
+                                     value="${displayVal}"
+                                     placeholder="${maxTopicReps}"
+                                     oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${maxTopicReps}, this.value)"
+                                     onkeydown="if(event.key==='Enter'){this.blur();}"
+                                     onclick="event.stopPropagation();"
+                                     style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#38bdf8; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                            </div>
+                          `;
+                        }
+
+                        const pct = maxTopicReps > 0 ? Math.round((earned / maxTopicReps) * 100) : 0;
+                        const isComplete = earned >= maxTopicReps && maxTopicReps > 0;
+                        const color = earned === 0
+                          ? '#64748b'
+                          : (typeof getGradeColorByScore === 'function'
+                              ? getGradeColorByScore(pct)
+                              : (isComplete ? 'var(--grade-a)' : (pct >= 60 ? 'var(--grade-c)' : 'var(--grade-e)')));
+                        return `
+                          <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                               onclick="event.stopPropagation(); window.switchClassAttendanceTopic('${topCode}');"
+                               ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
+                               title="Topic ${topCode} (${topName}): ${earned}/${maxTopicReps} reps completed - Click to inspect detailed attempts">
+                            <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:700; color:${color}; font-variant-numeric:tabular-nums;">
+                              ${earned}/${maxTopicReps}
+                            </span>
+                          </div>
+                        `;
+                      }
+                    });
+                  }
                 });
               } else if (topicCodes.length > 0) {
                 // Mode 3: Detailed Progress for Single Selected Topic
                 const targetTopCode = selectedTopic.toUpperCase();
                 const topicCodesToRender = topicCodes.includes(targetTopCode) ? [targetTopCode] : [topicCodes[0]];
 
-                // Topic Repetitions Helper to partition Words vs Phrases accurately
+                // Topic Repetitions Helper to partition Words vs Phrases accurately (passed >= 70% first so 7/7 never shows 0% failed tries)
                 const getTopicAttemptsForComp = (studentAttsList, mTasks, compType) => {
                   const comp = compType === 'phrases' ? 'phrases' : 'words';
                   const explicitPhrasesTask = mTasks.find(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
                   const explicitWordsTask = mTasks.find(a => !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+
+                  const sortPassedFirst = (atts, targetTask) => {
+                    const fallbackQ = Number(getAsmExpectedMax(targetTask) || 10);
+                    const getPct = (a) => {
+                      const tQ = Number(a.total_questions || fallbackQ);
+                      const sc = Number(a.score ?? 0);
+                      return Number(a.percentage ?? (tQ > 0 ? (sc / tQ) * 100 : 0));
+                    };
+                    const passed = atts.filter(a => getPct(a) >= 70 || Boolean(a.is_forgiven));
+                    const failed = atts.filter(a => getPct(a) < 70 && !a.is_forgiven);
+                    const byDate = (x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0);
+                    passed.sort(byDate);
+                    failed.sort(byDate);
+                    return { passed, failed };
+                  };
 
                   if (comp === 'phrases' && explicitPhrasesTask && explicitWordsTask && explicitPhrasesTask.id !== explicitWordsTask.id) {
                     const atts = (studentAttsList || []).filter(a =>
                       (a.test_id || a.Test_id) === explicitPhrasesTask.id &&
                       ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
                     );
-                    atts.sort((x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0));
-                    return { task: explicitPhrasesTask, taskId: explicitPhrasesTask.id, attempts: atts };
+                    const { passed, failed } = sortPassedFirst(atts, explicitPhrasesTask);
+                    return { task: explicitPhrasesTask, taskId: explicitPhrasesTask.id, attempts: passed, failedAttempts: failed };
                   }
 
                   if (comp === 'words' && explicitPhrasesTask && explicitWordsTask && explicitPhrasesTask.id !== explicitWordsTask.id) {
@@ -5446,8 +5612,8 @@ if (typeof window !== 'undefined') {
                       (a.test_id || a.Test_id) === explicitWordsTask.id &&
                       ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
                     );
-                    atts.sort((x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0));
-                    return { task: explicitWordsTask, taskId: explicitWordsTask.id, attempts: atts };
+                    const { passed, failed } = sortPassedFirst(atts, explicitWordsTask);
+                    return { task: explicitWordsTask, taskId: explicitWordsTask.id, attempts: passed, failedAttempts: failed };
                   }
 
                   // Unified or single task fallback:
@@ -5460,8 +5626,8 @@ if (typeof window !== 'undefined') {
                     const sec = typeof getAttemptSection === 'function' ? getAttemptSection(a) : 'words';
                     return comp === 'phrases' ? sec === 'phrases' : sec !== 'phrases';
                   });
-                  atts.sort((x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0));
-                  return { task, taskId, attempts: atts };
+                  const { passed, failed } = sortPassedFirst(atts, task);
+                  return { task, taskId, attempts: passed, failedAttempts: failed };
                 };
 
                 topicCodesToRender.forEach((topCode, topIdx) => {
@@ -5488,8 +5654,10 @@ if (typeof window !== 'undefined') {
                       align: 'center',
                       render: (val, row) => {
                         const isManualMode = Boolean(window._classManualScoreEditMode);
-                        const { task, taskId, attempts } = getTopicAttemptsForComp(row.allAttempts, matchingTasks, 'words');
-                        const att = attempts[repIdx];
+                        const { task, taskId, attempts, failedAttempts = [] } = getTopicAttemptsForComp(row.allAttempts, matchingTasks, 'words');
+                        const wordsRepsPassed = row[`theme_${tc}_topic_${topCode}_words_reps`] || 0;
+                        const passedOrWaivedCount = Math.max(attempts.length, wordsRepsPassed);
+                        const att = attempts[repIdx] || (repIdx >= passedOrWaivedCount ? failedAttempts[repIdx - passedOrWaivedCount] : null);
                         const totalQ = Number(att?.total_questions || getAsmExpectedMax(task) || 10);
                         const rawScore = att ? Number(att.score ?? 0) : null;
                         const origPct = att != null
@@ -5543,7 +5711,6 @@ if (typeof window !== 'undefined') {
                         }
 
                         // Waived / Manual pass fallback: if reps passed, render passing rate (70%)
-                        const wordsRepsPassed = row[`theme_${tc}_topic_${topCode}_words_reps`] || 0;
                         if (repIdx < wordsRepsPassed) {
                           const rateColor = 'var(--grade-c)';
                           return `
@@ -5587,8 +5754,10 @@ if (typeof window !== 'undefined') {
                         align: 'center',
                         render: (val, row) => {
                           const isManualMode = Boolean(window._classManualScoreEditMode);
-                          const { task, taskId, attempts } = getTopicAttemptsForComp(row.allAttempts, matchingTasks, 'phrases');
-                          const att = attempts[repIdx];
+                          const { task, taskId, attempts, failedAttempts = [] } = getTopicAttemptsForComp(row.allAttempts, matchingTasks, 'phrases');
+                          const phrasesRepsPassed = row[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0;
+                          const passedOrWaivedCount = Math.max(attempts.length, phrasesRepsPassed);
+                          const att = attempts[repIdx] || (repIdx >= passedOrWaivedCount ? failedAttempts[repIdx - passedOrWaivedCount] : null);
                           const totalQ = Number(att?.total_questions || getAsmExpectedMax(task) || 10);
                           const rawScore = att ? Number(att.score ?? 0) : null;
                           const origPct = att != null
@@ -5642,7 +5811,6 @@ if (typeof window !== 'undefined') {
                           }
 
                           // Waived / Manual pass fallback: if reps passed, render passing rate (70%)
-                          const phrasesRepsPassed = row[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0;
                           if (repIdx < phrasesRepsPassed) {
                             const rateColor = 'var(--grade-c)';
                             return `
@@ -5682,10 +5850,16 @@ if (typeof window !== 'undefined') {
               const isUnifiedExam = Boolean(wordsExam && phrasesExam && wordsExam.id === phrasesExam.id);
               const wordsTotalQ = (isVocab && !isLevel2Vocab) ? 160 : (isUnifiedExam ? 160 : (Number(wordsExam?.payload?.total_questions || wordsExam?.total_questions || 160) || 160));
               const phrasesTotalQ = (isVocab && !isLevel2Vocab) ? 40 : (isUnifiedExam ? 40 : (Number(phrasesExam?.payload?.total_questions || phrasesExam?.total_questions || 40) || 40));
+              const themeWordsTotalQ = (isVocab && !isLevel2Vocab && ['A', 'B', 'C', 'D'].includes(tc))
+                ? (tc === 'B' ? 320 : tc === 'C' ? 480 : tc === 'D' ? 640 : 160)
+                : wordsTotalQ;
+              const themePhrasesTotalQ = (isVocab && !isLevel2Vocab && ['A', 'B', 'C', 'D'].includes(tc))
+                ? (tc === 'B' ? 80 : tc === 'C' ? 120 : tc === 'D' ? 160 : 40)
+                : phrasesTotalQ;
 
               if (hasExamPhrases) {
-                // 1. WRD RATE (Words Exam Rate %)
-                dynamicAsmCols.push({
+                // 1. WRD RATE (Words Exam Rate % - Detail Mode only)
+                if (!isOverviewMode) dynamicAsmCols.push({
                   key: `theme_${tc}_words_rate`,
                   className: `col-asm col-exam col-exam-wrd-rate col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
                   width: '48px',
@@ -5714,11 +5888,11 @@ if (typeof window !== 'undefined') {
                                  data-student-id="${row.id}"
                                  data-test-id="${wordsExam.id}"
                                  data-section="words"
-                                 data-total-q="${wordsTotalQ}"
+                                 data-total-q="${themeWordsTotalQ}"
                                  data-original-score="${wRate != null && wRate >= 0 ? wRate : ''}"
                                  value="${displayScore}"
                                  placeholder="%"
-                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${wordsExam.id}', 'words', ${wordsTotalQ}, this.value, false, ${phrasesTotalQ}, '${tc}')"
+                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${wordsExam.id}', 'words', ${themeWordsTotalQ}, this.value, false, ${themePhrasesTotalQ}, '${tc}')"
                                  onkeydown="if(event.key==='Enter'){this.blur();}"
                                  onclick="event.stopPropagation();"
                                  style="width:100%; height:100%; background:transparent; border:none; outline:none; color:var(--grade-b, #95ff00); font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
@@ -5726,6 +5900,13 @@ if (typeof window !== 'undefined') {
                       `;
                     }
 
+                    if (!isTaskCompleted && row[`theme_${tc}_baseline_zero`]) {
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Baseline 0% until completed.">
+                          <span style="color:var(--grade-e); display:inline-flex; align-items:center;">${getSvgIcon('lock', 12)}</span>
+                        </div>
+                      `;
+                    }
                     if (wRate != null && wRate >= 0) {
                       const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(wRate) : '#ffffff';
                       return `
@@ -5772,15 +5953,15 @@ if (typeof window !== 'undefined') {
                       const displayPts = currentDraft?.pts != null ? Math.round(Number(currentDraft.pts)) : cleanPts;
                       return `
                         <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
-                          <input type="number" min="0" max="${wordsTotalQ}" class="input-matrix-words-pts input-matrix-words-pts-${row.id}-${tc.toLowerCase()}"
+                          <input type="number" min="0" max="${themeWordsTotalQ}" class="input-matrix-words-pts input-matrix-words-pts-${row.id}-${tc.toLowerCase()}"
                                  data-student-id="${row.id}"
                                  data-test-id="${wordsExam.id}"
                                  data-section="words"
-                                 data-total-q="${wordsTotalQ}"
+                                 data-total-q="${themeWordsTotalQ}"
                                  data-original-pts="${cleanPts}"
                                  value="${displayPts}"
-                                 placeholder="${wordsTotalQ}"
-                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${wordsExam.id}', 'words', ${wordsTotalQ}, this.value, true, ${phrasesTotalQ}, '${tc}')"
+                                 placeholder="${themeWordsTotalQ}"
+                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${wordsExam.id}', 'words', ${themeWordsTotalQ}, this.value, true, ${themePhrasesTotalQ}, '${tc}')"
                                  onkeydown="if(event.key==='Enter'){this.blur();}"
                                  onclick="event.stopPropagation();"
                                  style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
@@ -5802,8 +5983,30 @@ if (typeof window !== 'undefined') {
                   }
                 });
 
-                // 3. PHR RATE (Phrase Exam Rate %)
-                dynamicAsmCols.push({
+                // 2b. WRD Q (Word Questions Count - Detail Mode only)
+                if (!isOverviewMode) dynamicAsmCols.push({
+                  key: `theme_${tc}_words_q`,
+                  className: `col-asm col-exam col-exam-wrd-q col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
+                  width: '40px',
+                  minWidth: '34px',
+                  headerTitle: `Theme ${tc} Word Questions`,
+                  title: `Word Questions`,
+                  label: 'WRD Q',
+                  shortLabel: 'W-Q',
+                  microLabel: 'W-Q',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const fixedWQ = (isVocab && !isLevel2Vocab && ['A', 'B', 'C', 'D'].includes(tc))
+                      ? (tc === 'B' ? 320 : tc === 'C' ? 480 : tc === 'D' ? 640 : 160)
+                      : wordsTotalQ;
+                    const wQ = row[`theme_${tc}_words_q`] || fixedWQ;
+                    return `<span class="asm-score asm-score-test test-score-theme-wrd-q" style="color:#94a3b8; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Theme ${tc} Word Questions: ${wQ}">${wQ}</span>`;
+                  }
+                });
+
+                // 3. PHR RATE (Phrase Exam Rate % - Detail Mode only)
+                if (!isOverviewMode) dynamicAsmCols.push({
                   key: `theme_${tc}_phrases_rate`,
                   className: `col-asm col-exam col-exam-phr-rate col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
                   width: '48px',
@@ -5830,11 +6033,11 @@ if (typeof window !== 'undefined') {
                                  data-student-id="${row.id}"
                                  data-test-id="${phrasesExam.id}"
                                  data-section="phrases"
-                                 data-total-q="${phrasesTotalQ}"
+                                 data-total-q="${themePhrasesTotalQ}"
                                  data-original-score="${pRate != null && pRate >= 0 ? pRate : ''}"
                                  value="${displayScore}"
                                  placeholder="%"
-                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${phrasesExam.id}', 'phrases', ${phrasesTotalQ}, this.value, false, ${wordsTotalQ}, '${tc}')"
+                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${phrasesExam.id}', 'phrases', ${themePhrasesTotalQ}, this.value, false, ${themeWordsTotalQ}, '${tc}')"
                                  onkeydown="if(event.key==='Enter'){this.blur();}"
                                  onclick="event.stopPropagation();"
                                  style="width:100%; height:100%; background:transparent; border:none; outline:none; color:var(--grade-d, #FF8C00); font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
@@ -5850,6 +6053,13 @@ if (typeof window !== 'undefined') {
                               title="Theme ${tc} Phrase Rate: ${pRate}%">
                           ${pRate}%
                         </span>
+                      `;
+                    }
+                    if (!isTaskCompleted && row[`theme_${tc}_baseline_zero`]) {
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Baseline 0% until completed.">
+                          <span style="color:var(--grade-e); display:inline-flex; align-items:center;">${getSvgIcon('lock', 12)}</span>
+                        </div>
                       `;
                     }
                     if (wRate != null && wRate >= 0) {
@@ -5884,15 +6094,15 @@ if (typeof window !== 'undefined') {
                       const displayPts = currentDraft?.pts != null ? Math.round(Number(currentDraft.pts)) : cleanPts;
                       return `
                         <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
-                          <input type="number" min="0" max="${phrasesTotalQ}" class="input-matrix-phrases-pts input-matrix-phrases-pts-${row.id}-${tc.toLowerCase()}"
+                          <input type="number" min="0" max="${themePhrasesTotalQ}" class="input-matrix-phrases-pts input-matrix-phrases-pts-${row.id}-${tc.toLowerCase()}"
                                  data-student-id="${row.id}"
                                  data-test-id="${phrasesExam.id}"
                                  data-section="phrases"
-                                 data-total-q="${phrasesTotalQ}"
+                                 data-total-q="${themePhrasesTotalQ}"
                                  data-original-pts="${cleanPts}"
                                  value="${displayPts}"
-                                 placeholder="${phrasesTotalQ}"
-                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${phrasesExam.id}', 'phrases', ${phrasesTotalQ}, this.value, true, ${wordsTotalQ}, '${tc}')"
+                                 placeholder="${themePhrasesTotalQ}"
+                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${phrasesExam.id}', 'phrases', ${themePhrasesTotalQ}, this.value, true, ${themeWordsTotalQ}, '${tc}')"
                                  onkeydown="if(event.key==='Enter'){this.blur();}"
                                  onclick="event.stopPropagation();"
                                  style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
@@ -5914,6 +6124,28 @@ if (typeof window !== 'undefined') {
                   }
                 });
 
+                // 4b. PHR Q (Phrase Questions Count - Detail Mode only)
+                if (!isOverviewMode) dynamicAsmCols.push({
+                  key: `theme_${tc}_phrases_q`,
+                  className: `col-asm col-exam col-exam-phr-q col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
+                  width: '40px',
+                  minWidth: '34px',
+                  headerTitle: `Theme ${tc} Phrase Questions`,
+                  title: `Phrase Questions`,
+                  label: 'PHR Q',
+                  shortLabel: 'P-Q',
+                  microLabel: 'P-Q',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const fixedPQ = (isVocab && !isLevel2Vocab && ['A', 'B', 'C', 'D'].includes(tc))
+                      ? (tc === 'B' ? 80 : tc === 'C' ? 120 : tc === 'D' ? 160 : 40)
+                      : phrasesTotalQ;
+                    const pQ = row[`theme_${tc}_phrases_q`] || fixedPQ;
+                    return `<span class="asm-score asm-score-test test-score-theme-phr-q" style="color:#94a3b8; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Theme ${tc} Phrase Questions: ${pQ}">${pQ}</span>`;
+                  }
+                });
+
                 // 5. ACC PTS (Accumulative Points)
                 dynamicAsmCols.push({
                   key: `theme_${tc}_total_pts`,
@@ -5929,7 +6161,7 @@ if (typeof window !== 'undefined') {
                   align: 'center',
                   render: (val, row) => {
                     const ptsVal = row[`theme_${tc}_total_pts`];
-                    const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
+                    const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`] || row[`theme_${tc}_baseline_zero`]);
                     if (hasExamAttempt && ptsVal != null && ptsVal >= 0) {
                       const cleanTotal = Math.round(Number(ptsVal || 0));
                       const themePct = row[`theme_${tc}_score`] != null && row[`theme_${tc}_score`] >= 0 ? row[`theme_${tc}_score`] : 0;
@@ -5943,6 +6175,33 @@ if (typeof window !== 'undefined') {
                       `;
                     }
                     return `<span class="asm-score asm-score-test test-score-theme-total test-score-theme-total-${row.id}-${tc.toLowerCase()}" style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
+                  }
+                });
+
+                // 5b. TOTAL Q (Combined Questions Count - Overview Mode only)
+                if (isOverviewMode) dynamicAsmCols.push({
+                  key: `theme_${tc}_total_q`,
+                  className: `col-asm col-exam col-exam-total-q col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
+                  width: '42px',
+                  minWidth: '34px',
+                  headerTitle: `Theme ${tc} Total Questions`,
+                  title: `Total Questions`,
+                  label: 'TOTAL Q',
+                  shortLabel: 'Q',
+                  microLabel: 'Q',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const fixedWQ = (isVocab && !isLevel2Vocab && ['A', 'B', 'C', 'D'].includes(tc))
+                      ? (tc === 'B' ? 320 : tc === 'C' ? 480 : tc === 'D' ? 640 : 160)
+                      : wordsTotalQ;
+                    const fixedPQ = (isVocab && !isLevel2Vocab && ['A', 'B', 'C', 'D'].includes(tc))
+                      ? (tc === 'B' ? 80 : tc === 'C' ? 120 : tc === 'D' ? 160 : 40)
+                      : phrasesTotalQ;
+                    const wQ = Number(row[`theme_${tc}_words_q`] || fixedWQ);
+                    const pQ = Number(row[`theme_${tc}_phrases_q`] || fixedPQ);
+                    const sumQ = wQ + pQ;
+                    return `<span class="asm-score asm-score-test test-score-theme-total-q" style="color:#94a3b8; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Theme ${tc} Total Questions: ${sumQ} (${wQ}W + ${pQ}P)">${sumQ}</span>`;
                   }
                 });
 
@@ -5961,7 +6220,7 @@ if (typeof window !== 'undefined') {
                   align: 'center',
                   render: (val, row) => {
                     const scoreVal = row[`theme_${tc}_score`];
-                    const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
+                    const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`] || row[`theme_${tc}_baseline_zero`]);
                     if (hasExamAttempt && scoreVal != null && scoreVal >= 0) {
                       const themeGrade = typeof calculateGrade === 'function' ? calculateGrade(scoreVal) : 'C';
                       const cleanGrade = String(themeGrade || '').trim().toUpperCase();
@@ -6007,7 +6266,7 @@ if (typeof window !== 'undefined') {
                     const bestAtts = examAsms.map(e => row.asmScores?.[e.id]).filter(Boolean);
                     const themeAtts = studentAtts.length > 0 ? studentAtts : bestAtts;
                     const isForgiven = themeAtts.length > 0 && themeAtts.some(att => Boolean(att?.is_forgiven || att?.grade === 'F'));
-                    const isRem = (themeAtts.length > 0 && themeAtts.some(att => Boolean(att?.is_remedial_unlocked || att?.is_remedial || att?.grade === 'R'))) || (wRate != null && (pRate == null || pRate < 60));
+                    const isRem = hasExamAttempt && ((themeAtts.length > 0 && themeAtts.some(att => Boolean(att?.is_remedial_unlocked || att?.is_remedial || att?.grade === 'R'))) || (wRate != null && (pRate == null || pRate < 60)));
                     const isPassed = ((scoreVal != null && scoreVal >= 60 && pRate != null && pRate >= 60) || isForgiven);
 
                     const isRemMode = Boolean(window._classRemedialEditMode);
@@ -6469,8 +6728,15 @@ if (typeof window !== 'undefined') {
                   const parts = key.split('_');
                   const tc = parts[1];
                   const topCode = parts[3];
-                  const earnedA = (a[`theme_${tc}_topic_${topCode}_words_reps`] || 0) + (a[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0) + (a[`theme_${tc}_topic_${topCode}_reps`] || 0);
-                  const earnedB = (b[`theme_${tc}_topic_${topCode}_words_reps`] || 0) + (b[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0) + (b[`theme_${tc}_topic_${topCode}_reps`] || 0);
+                  const isWordsOnly = key.includes('_words_summary');
+                  const isPhrasesOnly = key.includes('_phrases_summary');
+                  const getEarned = (s) => isWordsOnly
+                    ? (s[`theme_${tc}_topic_${topCode}_words_reps`] || 0)
+                    : (isPhrasesOnly
+                        ? (s[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0)
+                        : ((s[`theme_${tc}_topic_${topCode}_words_reps`] || 0) + (s[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0) + (s[`theme_${tc}_topic_${topCode}_reps`] || 0)));
+                  const earnedA = getEarned(a);
+                  const earnedB = getEarned(b);
                   if (earnedA !== earnedB) return (earnedA - earnedB) * dir;
                 }
                 if (key && key.includes('_att_')) {
@@ -6517,14 +6783,22 @@ if (typeof window !== 'undefined') {
                       });
                     }
 
-                    studentAtts.sort((x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0));
-                    const att = studentAtts[repIdx];
+                    const getPctOf = (a) => {
+                      const tQ = Number(a.total_questions || 10);
+                      const sc = Number(a.score ?? 0);
+                      return Number(a.percentage ?? (tQ > 0 ? (sc / tQ) * 100 : 0));
+                    };
+                    const byDate = (x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0);
+                    const passedAtts = studentAtts.filter(a => getPctOf(a) >= 70 || Boolean(a.is_forgiven)).sort(byDate);
+                    const failedAtts = studentAtts.filter(a => getPctOf(a) < 70 && !a.is_forgiven).sort(byDate);
+                    const repsPassed = student[`theme_${tc}_topic_${topCode}_${comp}_reps`] || 0;
+                    const passedOrWaivedCount = Math.max(passedAtts.length, repsPassed);
+                    const att = passedAtts[repIdx] || (repIdx >= passedOrWaivedCount ? failedAtts[repIdx - passedOrWaivedCount] : null);
                     if (att) {
                       const totalQ = Number(att.total_questions || 10);
                       const rawScore = Number(att.score ?? 0);
                       return Number(att.percentage ?? (totalQ > 0 ? (rawScore / totalQ) * 100 : 0));
                     }
-                    const repsPassed = student[`theme_${tc}_topic_${topCode}_${comp}_reps`] || 0;
                     if (repIdx < repsPassed) return 70;
                     return -1;
                   };
@@ -6661,14 +6935,22 @@ if (typeof window !== 'undefined') {
                     const parts = col.key.split('_');
                     const tc = parts[1];
                     const topCode = parts[3];
+                    const isWordsOnly = col.key.includes('_words_summary');
+                    const isPhrasesOnly = col.key.includes('_phrases_summary');
                     let repsSum = 0;
                     filteredData.forEach(s => {
-                      const wR = s[`theme_${tc}_topic_${topCode}_words_reps`] || 0;
-                      const pR = s[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0;
-                      if (wR > 0 || pR > 0) {
-                        repsSum += (wR + pR);
+                      if (isWordsOnly) {
+                        repsSum += (s[`theme_${tc}_topic_${topCode}_words_reps`] || 0);
+                      } else if (isPhrasesOnly) {
+                        repsSum += (s[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0);
                       } else {
-                        repsSum += (s[`theme_${tc}_topic_${topCode}_reps`] || 0);
+                        const wR = s[`theme_${tc}_topic_${topCode}_words_reps`] || 0;
+                        const pR = s[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0;
+                        if (wR > 0 || pR > 0) {
+                          repsSum += (wR + pR);
+                        } else {
+                          repsSum += (s[`theme_${tc}_topic_${topCode}_reps`] || 0);
+                        }
                       }
                     });
                     if (totalStudents > 0 && repsSum > 0) {
@@ -6679,14 +6961,17 @@ if (typeof window !== 'undefined') {
                         String(a.payload?.topic_code || '').toUpperCase() === topCode.toUpperCase() ||
                         (a.shell_code && a.shell_code.includes(topCode))
                       ));
-                      const maxTopicReps = checkTopicHasPhrases(matchingTasks) ? (compTargetReps * 2) : compTargetReps;
+                      const maxTopicReps = (isWordsOnly || isPhrasesOnly)
+                        ? compTargetReps
+                        : (checkTopicHasPhrases(matchingTasks) ? (compTargetReps * 2) : compTargetReps);
                       const avgPct = maxTopicReps > 0 ? Math.round((avgNum / maxTopicReps) * 100) : 0;
                       const avgColor = typeof getGradeColorByScore === 'function'
                         ? getGradeColorByScore(avgPct)
                         : (avgPct >= 90 ? 'var(--grade-a)' : (avgPct >= 60 ? 'var(--grade-c)' : 'var(--grade-e)'));
+                      const compText = isWordsOnly ? ' Words' : (isPhrasesOnly ? ' Phrases' : '');
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:${avgColor}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Topic ${topCode} Reps: ${avgReps}/${maxTopicReps} (${avgPct}%)">${avgReps}</span>
+                          <span style="color:${avgColor}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Topic ${topCode}${compText} Reps: ${avgReps}/${maxTopicReps} (${avgPct}%)">${avgReps}</span>
                         </td>
                       `;
                     } else {
@@ -6742,8 +7027,17 @@ if (typeof window !== 'undefined') {
                         });
                       }
 
-                      studentAtts.sort((a, b) => new Date(a.created_at || a.submitted_at || 0) - new Date(b.created_at || b.submitted_at || 0));
-                      const att = studentAtts[repIdx];
+                      const getPctOf = (a) => {
+                        const tQ = Number(a.total_questions || 10);
+                        const sc = Number(a.score ?? 0);
+                        return Number(a.percentage ?? (tQ > 0 ? (sc / tQ) * 100 : 0));
+                      };
+                      const byDate = (a, b) => new Date(a.created_at || a.submitted_at || 0) - new Date(b.created_at || b.submitted_at || 0);
+                      const passedAtts = studentAtts.filter(a => getPctOf(a) >= 70 || Boolean(a.is_forgiven)).sort(byDate);
+                      const failedAtts = studentAtts.filter(a => getPctOf(a) < 70 && !a.is_forgiven).sort(byDate);
+                      const repsPassed = s[`theme_${tc}_topic_${topCode}_${comp}_reps`] || 0;
+                      const passedOrWaivedCount = Math.max(passedAtts.length, repsPassed);
+                      const att = passedAtts[repIdx] || (repIdx >= passedOrWaivedCount ? failedAtts[repIdx - passedOrWaivedCount] : null);
                       if (att) {
                         const totalQ = Number(att.total_questions || 10);
                         const rawScore = Number(att.score ?? 0);
@@ -6857,16 +7151,19 @@ if (typeof window !== 'undefined') {
                     const tc = col.key.replace('theme_', '').replace('_words_pts', '');
                     let count = 0;
                     let totalPtsSum = 0;
+                    let totalQSum = 0;
                     filteredData.forEach(s => {
                       const val = s[col.key];
                       if (val !== undefined && val !== null && val >= 0) {
                         count++;
                         totalPtsSum += Number(val);
+                        totalQSum += Number(s[`theme_${tc}_words_q`] || (tc === 'B' ? 320 : tc === 'C' ? 480 : tc === 'D' ? 640 : 160));
                       }
                     });
                     if (count > 0) {
                       const avgWrdPts = Math.round(totalPtsSum / count);
-                      const avgWrdPct = Math.min(100, Math.round((avgWrdPts / 160) * 100));
+                      const avgWrdQ = Math.max(1, Math.round(totalQSum / count));
+                      const avgWrdPct = Math.min(100, Math.round((avgWrdPts / avgWrdQ) * 100));
                       const avgColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgWrdPct) : '#ffffff';
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
@@ -6880,6 +7177,27 @@ if (typeof window !== 'undefined') {
                         </td>
                       `;
                     }
+                  } else if (col.key && col.key.startsWith('theme_') && (col.key.endsWith('_words_q') || col.key.endsWith('_phrases_q'))) {
+                    const isPhrQ = col.key.endsWith('_phrases_q');
+                    const tc = col.key.replace('theme_', '').replace(isPhrQ ? '_phrases_q' : '_words_q', '');
+                    const fallbackFixedQ = isPhrQ
+                      ? (tc === 'B' ? 80 : tc === 'C' ? 120 : tc === 'D' ? 160 : 40)
+                      : (tc === 'B' ? 320 : tc === 'C' ? 480 : tc === 'D' ? 640 : 160);
+                    let count = 0;
+                    let totalQSum = 0;
+                    filteredData.forEach(s => {
+                      const val = s[col.key];
+                      if (val !== undefined && val !== null && Number(val) > 0) {
+                        count++;
+                        totalQSum += Number(val);
+                      }
+                    });
+                    const displayQ = count > 0 ? Math.round(totalQSum / count) : fallbackFixedQ;
+                    cellsHtml += `
+                      <td class="text-center ${col.className || ''}">
+                        <span style="color:#94a3b8; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Theme ${tc} ${isPhrQ ? 'Phrase' : 'Word'} Questions: ${displayQ}">${displayQ}</span>
+                      </td>
+                    `;
                   } else if (col.key && col.key.startsWith('theme_') && col.key.endsWith('_phrases_rate')) {
                     const tc = col.key.replace('theme_', '').replace('_phrases_rate', '');
                     let count = 0;
@@ -6910,16 +7228,19 @@ if (typeof window !== 'undefined') {
                     const tc = col.key.replace('theme_', '').replace('_phrases_pts', '');
                     let count = 0;
                     let totalPtsSum = 0;
+                    let totalQSum = 0;
                     filteredData.forEach(s => {
                       const val = s[col.key];
                       if (val !== undefined && val !== null && val >= 0) {
                         count++;
                         totalPtsSum += Number(val);
+                        totalQSum += Number(s[`theme_${tc}_phrases_q`] || (tc === 'B' ? 80 : tc === 'C' ? 120 : tc === 'D' ? 160 : 40));
                       }
                     });
                     if (count > 0) {
                       const avgPhrPts = Math.round(totalPtsSum / count);
-                      const avgPhrPct = Math.min(100, Math.round((avgPhrPts / 40) * 100));
+                      const avgPhrQ = Math.max(1, Math.round(totalQSum / count));
+                      const avgPhrPct = Math.min(100, Math.round((avgPhrPts / avgPhrQ) * 100));
                       const avgColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPhrPct) : '#ffffff';
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
@@ -6969,7 +7290,7 @@ if (typeof window !== 'undefined') {
                       if (val !== undefined && val !== null && val >= 0) {
                         count++;
                         totalPtsSum += Number(val);
-                        totalMaxQSum += Number(s[`theme_${tc}_max_q`] || (tc === 'A' ? 150 : tc === 'B' ? 350 : tc === 'C' ? 600 : 800));
+                        totalMaxQSum += Number(s[`theme_${tc}_max_q`] || (tc === 'A' ? 200 : tc === 'B' ? 400 : tc === 'C' ? 600 : 800));
                       }
                     });
                     if (count > 0) {
@@ -7194,7 +7515,7 @@ if (typeof window !== 'undefined') {
                     minWidth: '34px',
                     render: (val, row) => {
                       const isExamTaken = (row.completedExamCount || row.completedWeeklyCount || 0) > 0;
-                      if (!isExamTaken && (!val || val === 0)) {
+                      if (!isExamTaken && !row._hasClassReachedBaseline && (!val || val === 0)) {
                         return '<span class="text-muted" style="font-size:12px;">—</span>';
                       }
                       const scoreColor = (typeof getGradeColorByScore === 'function')

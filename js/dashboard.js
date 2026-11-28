@@ -3382,7 +3382,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
 
           statusBadge = passed
-            ? `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);color:${TOPSCORE_COLORS.STAR};border:1px solid rgba(${TOPSCORE_COLORS.STAR_RGB},0.3);">✓ Passed</span>`
+            ? `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.A_RGB},0.15);color:${TOPSCORE_COLORS.A};border:1px solid rgba(${TOPSCORE_COLORS.A_RGB},0.3);">✓ Passed</span>`
             : `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.3);">Needs Improvement</span>`;
 
           const canRetake = isAsmTest ? (isEligibleForSelfPacedExam || (retakesAllowed && !passed)) : retakesAllowed;
@@ -3667,44 +3667,52 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const effPoints = isRem ? Math.min(rawScore, maxRemPts) : rawScore;
 
           if (isUnified) {
+            const rawTc = String(
+              asm?.payload?.theme_code ||
+              (String(asm?.shell_code || '').match(/-(?:[0-9]*)([A-D])(?:-|$)/i)?.[1]) ||
+              'A'
+            ).toUpperCase();
+            const expW = rawTc === 'B' ? 320 : rawTc === 'C' ? 480 : rawTc === 'D' ? 640 : 160;
+            const expP = expW / 4;
+
             let sectionKey = uniqueKey;
             let sectionTQ = tQ;
             let sectionPts = effPoints;
             let sectionPct = effPct;
 
-            if (fr.includes('[SECTION: WORDS]') || (!fr.includes('[SECTION: PHRASES]') && tQ > 40 && tQ <= 160)) {
+            if (fr.includes('[SECTION: WORDS]') || (!fr.includes('[SECTION: PHRASES]') && tQ > expP && tQ <= expW)) {
               sectionKey = `${uniqueKey}_words`;
-              sectionTQ = 160;
-              sectionPts = tQ === 160 ? Math.round(effPoints) : Math.round(160 * (effPct / 100));
-            } else if (fr.includes('[SECTION: PHRASES]') || (!fr.includes('[SECTION: WORDS]') && tQ > 0 && tQ <= 40)) {
+              sectionTQ = expW;
+              sectionPts = tQ === expW ? Math.round(effPoints) : Math.round(expW * (effPct / 100));
+            } else if (fr.includes('[SECTION: PHRASES]') || (!fr.includes('[SECTION: WORDS]') && tQ > 0 && tQ <= expP)) {
               sectionKey = `${uniqueKey}_phrases`;
-              sectionTQ = 40;
-              sectionPts = tQ === 40 ? Math.round(effPoints) : Math.round(40 * (effPct / 100));
-            } else if (tQ > 160) {
-              // Full 200Q attempt: decompose into words (160) and phrases (40)
-              const wPts = Math.min(160, Math.round(effPoints));
-              const wPct = (wPts / 160) * 100;
+              sectionTQ = expP;
+              sectionPts = tQ === expP ? Math.round(effPoints) : Math.round(expP * (effPct / 100));
+            } else if (tQ > expW) {
+              // Full Unified attempt: decompose into words (expW) and phrases (expP)
+              const wPts = Math.min(expW, Math.round(effPoints));
+              const wPct = (wPts / expW) * 100;
               const curWPts = examBestMap[`${uniqueKey}_words`]?.effPoints ?? -1;
               if (examBestMap[`${uniqueKey}_words`] == null || wPts > curWPts) {
                 examBestMap[`${uniqueKey}_words`] = {
                   effPct: wPct,
                   effPoints: wPts,
-                  totalQ: 160,
+                  totalQ: expW,
                   test: asm,
                   testId: `${uniqueKey}_words`,
                   attTime,
                   isForgiven: Boolean(att.is_forgiven)
                 };
               }
-              if (rawScore > 160) {
-                const pPts = Math.min(40, Math.round(effPoints - 160));
-                const pPct = (pPts / 40) * 100;
+              if (rawScore > expW) {
+                const pPts = Math.min(expP, Math.round(effPoints - expW));
+                const pPct = (pPts / expP) * 100;
                 const curPPts = examBestMap[`${uniqueKey}_phrases`]?.effPoints ?? -1;
                 if (examBestMap[`${uniqueKey}_phrases`] == null || pPts > curPPts) {
                   examBestMap[`${uniqueKey}_phrases`] = {
                     effPct: pPct,
                     effPoints: pPts,
-                    totalQ: 40,
+                    totalQ: expP,
                     test: asm,
                     testId: `${uniqueKey}_phrases`,
                     attTime,
@@ -3951,11 +3959,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       }
 
-      // 3. Score Value Display (Inside Grade Card)
+      // 3. Score Value Display (Inside Grade Card — 100% uses Pure Green, never purple)
       const scoreVal = document.getElementById('bottom-stat-avg-score');
       if (scoreVal) {
         scoreVal.textContent = hasExam ? `${avgPct}%` : '-';
-        scoreVal.style.setProperty('color', targetColor, 'important');
+        scoreVal.style.setProperty('color', isGradeS ? TOPSCORE_COLORS.A : targetColor, 'important');
         scoreVal.style.setProperty('filter', 'none', 'important');
         scoreVal.classList.remove('text-grade-star');
       }
@@ -5609,62 +5617,74 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const isUnified = resolveTestCapabilities(testMeta, window._activeClassObj || null).isUnified || Number(testMeta?.payload?.total_questions || 0) === 200;
 
             if (isUnified) {
+              const rawTc = String(
+                testMeta?.payload?.theme_code ||
+                (String(testMeta?.shell_code || '').match(/-(?:[0-9]*)([A-D])(?:-|$)/i)?.[1]) ||
+                'A'
+              ).toUpperCase();
+              const expW = rawTc === 'B' ? 320 : rawTc === 'C' ? 480 : rawTc === 'D' ? 640 : 160;
+              const expP = expW / 4;
+
               const wordsAtts = atts.filter(a => {
                 const fr = String(a.forgiven_reason || '');
                 const tQ = Number(a.total_questions || 0);
                 if (fr.includes('[SECTION: PHRASES]')) return false;
-                return fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160);
+                return fr.includes('[SECTION: WORDS]') || (tQ > expP && tQ <= expW);
               });
               const phrasesAtts = atts.filter(a => {
                 const fr = String(a.forgiven_reason || '');
                 const tQ = Number(a.total_questions || 0);
                 if (fr.includes('[SECTION: WORDS]')) return false;
-                return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40);
+                return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= expP);
               });
-              const fullAtts = atts.filter(a => Number(a.total_questions || 0) > 160);
+              const fullAtts = atts.filter(a => {
+                const fr = String(a.forgiven_reason || '');
+                if (fr.includes('[SECTION: WORDS]') || fr.includes('[SECTION: PHRASES]')) return false;
+                return Number(a.total_questions || 0) > expW;
+              });
 
               let bestWords = null;
               wordsAtts.forEach(a => {
-                const tQ = Number(a.total_questions || 160);
+                const tQ = Number(a.total_questions || expW);
                 const rawPct = Number(a.percentage != null ? a.percentage : (a.score / tQ) * 100);
                 const isRem = Boolean(a.is_remedial_unlocked);
                 const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                const pts = tQ === 160 ? Math.round(Number(a.score || 0)) : Math.round(160 * (effPct / 100));
+                const pts = tQ === expW ? Math.round(Number(a.score || 0)) : Math.round(expW * (effPct / 100));
                 const attTime = new Date(a.submitted_at || a.created_at || 0).getTime();
                 if (!bestWords || pts > bestWords.points || (pts === bestWords.points && effPct > bestWords.effPct)) {
-                  bestWords = { test: testMeta, isExam: true, effPct, points: pts, totalQ: 160, attTime, isForgiven: Boolean(a.is_forgiven) };
+                  bestWords = { test: testMeta, isExam: true, effPct, points: pts, totalQ: expW, attTime, isForgiven: Boolean(a.is_forgiven) };
                 }
               });
               fullAtts.forEach(a => {
-                const wSc = Math.min(160, Number(a.score || 0));
-                const wPct = (wSc / 160) * 100;
+                const wSc = Math.min(expW, Number(a.score || 0));
+                const wPct = (wSc / expW) * 100;
                 const pts = Math.round(wSc);
                 const attTime = new Date(a.submitted_at || a.created_at || 0).getTime();
                 if (!bestWords || pts > bestWords.points || (pts === bestWords.points && wPct > bestWords.effPct)) {
-                  bestWords = { test: testMeta, isExam: true, effPct: wPct, points: pts, totalQ: 160, attTime, isForgiven: Boolean(a.is_forgiven) };
+                  bestWords = { test: testMeta, isExam: true, effPct: wPct, points: pts, totalQ: expW, attTime, isForgiven: Boolean(a.is_forgiven) };
                 }
               });
 
               let bestPhrases = null;
               phrasesAtts.forEach(a => {
-                const tQ = Number(a.total_questions || 40);
+                const tQ = Number(a.total_questions || expP);
                 const rawPct = Number(a.percentage != null ? a.percentage : (a.score / tQ) * 100);
                 const isRem = Boolean(a.is_remedial_unlocked);
                 const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                const pts = tQ === 40 ? Math.round(Number(a.score || 0)) : Math.round(40 * (effPct / 100));
+                const pts = tQ === expP ? Math.round(Number(a.score || 0)) : Math.round(expP * (effPct / 100));
                 const attTime = new Date(a.submitted_at || a.created_at || 0).getTime();
                 if (!bestPhrases || pts > bestPhrases.points || (pts === bestPhrases.points && effPct > bestPhrases.effPct)) {
-                  bestPhrases = { test: testMeta, isExam: true, effPct, points: pts, totalQ: 40, attTime, isForgiven: Boolean(a.is_forgiven) };
+                  bestPhrases = { test: testMeta, isExam: true, effPct, points: pts, totalQ: expP, attTime, isForgiven: Boolean(a.is_forgiven) };
                 }
               });
               fullAtts.forEach(a => {
-                if (Number(a.score || 0) > 160) {
-                  const pSc = Math.min(40, Number(a.score || 0) - 160);
-                  const pPct = (pSc / 40) * 100;
+                if (Number(a.score || 0) > expW) {
+                  const pSc = Math.min(expP, Number(a.score || 0) - expW);
+                  const pPct = (pSc / expP) * 100;
                   const pts = Math.round(pSc);
                   const attTime = new Date(a.submitted_at || a.created_at || 0).getTime();
                   if (!bestPhrases || pts > bestPhrases.points || (pts === bestPhrases.points && pPct > bestPhrases.effPct)) {
-                    bestPhrases = { test: testMeta, isExam: true, effPct: pPct, points: pts, totalQ: 40, attTime, isForgiven: Boolean(a.is_forgiven) };
+                    bestPhrases = { test: testMeta, isExam: true, effPct: pPct, points: pts, totalQ: expP, attTime, isForgiven: Boolean(a.is_forgiven) };
                   }
                 }
               });
@@ -5727,6 +5747,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const isPureForgivenZero = Boolean(e.isForgiven) && Number(e.points ?? e.effPoints ?? 0) === 0;
             return !isPureForgivenZero;
           });
+          const validExamMap = {};
+          Object.entries(bestMap).forEach(([k, v]) => {
+            if (v && v.isExam) {
+              const isPureForgivenZero = Boolean(v.isForgiven) && Number(v.points ?? v.effPoints ?? 0) === 0;
+              if (!isPureForgivenZero) validExamMap[k] = v;
+            }
+          });
           const validExamPts = validExamItems.reduce((sum, e) => sum + Number(e.points ?? e.effPoints ?? 0), 0);
           const validExamQ = validExamItems.reduce((sum, e) => sum + Number(e.totalQ || 0), 0);
           const overallScore = validExamQ > 0
@@ -5751,9 +5778,34 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             completedWeeklyCount: completedExamCount,
             progressPct,
             lastSubmittedAt,
-            grade
+            grade,
+            _validExamMap: validExamMap,
+            _validExamPts: validExamPts
           };
         });
+
+        // Class-Peer Baseline: When any classmate completes an exam/section, unattempted classmates start at 0
+        const classReachedExamKeys = new Map();
+        studentStats.forEach(st => {
+          Object.entries(st._validExamMap || {}).forEach(([k, v]) => {
+            if (!classReachedExamKeys.has(k) && Number(v.totalQ || 0) > 0) {
+              classReachedExamKeys.set(k, Number(v.totalQ || 0));
+            }
+          });
+        });
+        if (classReachedExamKeys.size > 0) {
+          studentStats.forEach(st => {
+            let denomQ = 0;
+            classReachedExamKeys.forEach((defaultQ, k) => {
+              const own = st._validExamMap?.[k];
+              denomQ += own ? Number(own.totalQ || defaultQ) : defaultQ;
+            });
+            if (denomQ > 0) {
+              st.overallScore = Math.min(100, Math.max(0, Math.round((st._validExamPts / denomQ) * 100)));
+              st.grade = typeof calculateGrade === 'function' ? calculateGrade(st.overallScore) : st.grade;
+            }
+          });
+        }
 
         // 4. Deterministic Multi-Tier Ranking (Points-First Standings Hierarchy):
         // Standings columns are NO | STUDENTS NAME | POINT | GRADE.
