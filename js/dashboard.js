@@ -3346,7 +3346,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let actionBtn = '';
         const isCompleted = bestAtt && ['SUBMITTED', 'AUTO_SUBMITTED'].includes((bestAtt.status || '').toUpperCase());
 
-        const isLocked = !isAlumni && !prereqMet;
+        const isLocked = !isAlumni && !isWhitelisted && !prereqMet;
 
         if (isLocked) {
           statusBadge = `<span class="badge" style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);display:inline-flex;align-items:center;">${getSvgIcon('lock', 12)} Locked</span>`;
