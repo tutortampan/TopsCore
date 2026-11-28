@@ -810,7 +810,7 @@ export async function openVocabularySystemModal(options = {}) {
             </div>
 
             <!-- Horizontal Side-by-Side: Words Task & Phrases Task -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="display:grid; grid-template-columns:${activeClass.hasPhrases ? '1fr 1fr' : '1fr'}; gap:10px;">
               <!-- Sub-Card: Words Task -->
               <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px;">
                 <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -859,12 +859,12 @@ export async function openVocabularySystemModal(options = {}) {
                 </div>
               </div>
 
-              <!-- Sub-Card: Phrases Task -->
-              <div style="background:rgba(0,0,0,0.3); border:1px solid ${activeClass.hasPhrases ? 'rgba(255,140,0,0.2)' : 'rgba(255,255,255,0.05)'}; border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px; opacity:${activeClass.hasPhrases ? '1' : '0.45'};">
+              ${activeClass.hasPhrases ? `<!-- Sub-Card: Phrases Task -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,140,0,0.2); border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px;">
                 <div style="display:flex; align-items:center; justify-content:space-between;">
                   <span style="font-size:13px; font-weight:800; color:#f8fafc;">Phrases Component (Phrase)</span>
                   <div style="font-size:12px; color:#94a3b8; font-weight:600;">
-                    Duration: <strong id="wiz-phrases-task-dur-display" style="color:#FF8C00; font-size:13px; font-weight:800;">${activeClass.hasPhrases ? (s.phrasesTaskDur || 4) : 0}m</strong>
+                    Duration: <strong id="wiz-phrases-task-dur-display" style="color:#FF8C00; font-size:13px; font-weight:800;">${s.phrasesTaskDur || 4}m</strong>
                   </div>
                 </div>
 
@@ -872,18 +872,18 @@ export async function openVocabularySystemModal(options = {}) {
                 <div style="display:grid; grid-template-columns:115px 1fr; gap:10px; align-items:center;">
                   <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Questions</label>
-                    <div class="wiz-q-capsule" id="wiz-phrases-task-capsule" style="display:inline-flex; align-items:center; height:30px; background:#090d16; border:1px solid ${isPhrasesTaskCustom && activeClass.hasPhrases ? '#FF8C00' : 'rgba(255,255,255,0.2)'}; border-radius:4px; overflow:hidden; box-sizing:border-box; opacity:${activeClass.hasPhrases ? '1' : '0.5'};">
-                      <button type="button" class="wiz-q-btn-all" id="wiz-phrases-task-btn-all" data-target-check="wiz-phrases-task-custom" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:100%; border:none; padding:0 10px; font-size:12px; font-weight:${!isPhrasesTaskCustom ? '800' : '700'}; cursor:pointer; background:${!isPhrasesTaskCustom && activeClass.hasPhrases ? 'rgba(255,140,0,0.25)' : 'transparent'}; color:${!isPhrasesTaskCustom && activeClass.hasPhrases ? '#FF8C00' : '#64748b'}; transition:all 0.12s ease;">ALL</button>
+                    <div class="wiz-q-capsule" id="wiz-phrases-task-capsule" style="display:inline-flex; align-items:center; height:30px; background:#090d16; border:1px solid ${isPhrasesTaskCustom ? '#FF8C00' : 'rgba(255,255,255,0.2)'}; border-radius:4px; overflow:hidden; box-sizing:border-box;">
+                      <button type="button" class="wiz-q-btn-all" id="wiz-phrases-task-btn-all" data-target-check="wiz-phrases-task-custom" style="height:100%; border:none; padding:0 10px; font-size:12px; font-weight:${!isPhrasesTaskCustom ? '800' : '700'}; cursor:pointer; background:${!isPhrasesTaskCustom ? 'rgba(255,140,0,0.25)' : 'transparent'}; color:${!isPhrasesTaskCustom ? '#FF8C00' : '#64748b'}; transition:all 0.12s ease;">ALL</button>
                       <div style="width:1px; height:18px; background:rgba(255,255,255,0.12);"></div>
-                      <label id="wiz-phrases-task-custom-label" style="display:inline-flex; align-items:center; height:100%; padding:0 6px; gap:4px; cursor:pointer; background:${isPhrasesTaskCustom && activeClass.hasPhrases ? 'rgba(255,140,0,0.12)' : 'transparent'}; transition:all 0.12s ease;" title="Check to set custom question count">
-                        <input type="checkbox" id="wiz-phrases-task-custom" class="wiz-q-custom-check" data-target="wiz-phrases-task-questions" data-capsule="wiz-phrases-task-capsule" data-btn-all="wiz-phrases-task-btn-all" data-custom-label="wiz-phrases-task-custom-label" data-color="#FF8C00" data-rgb="255,140,0" ${!activeClass.hasPhrases ? 'disabled' : ''} ${isPhrasesTaskCustom && activeClass.hasPhrases ? 'checked' : ''} style="cursor:pointer; accent-color:#FF8C00; width:13px; height:13px; margin:0;" />
-                        <input type="number" id="wiz-phrases-task-questions" class="wiz-q-num-input" data-check="wiz-phrases-task-custom" value="${phrasesTaskNum}" min="1" max="200" ${!activeClass.hasPhrases || !isPhrasesTaskCustom ? 'disabled' : ''} style="height:26px; width:36px; text-align:center; font-size:12px; font-weight:800; background:transparent; border:none; color:${isPhrasesTaskCustom && activeClass.hasPhrases ? '#ffffff' : '#64748b'}; padding:0; outline:none; ${!isPhrasesTaskCustom || !activeClass.hasPhrases ? 'opacity:0.4;' : ''}" />
+                      <label id="wiz-phrases-task-custom-label" style="display:inline-flex; align-items:center; height:100%; padding:0 6px; gap:4px; cursor:pointer; background:${isPhrasesTaskCustom ? 'rgba(255,140,0,0.12)' : 'transparent'}; transition:all 0.12s ease;" title="Check to set custom question count">
+                        <input type="checkbox" id="wiz-phrases-task-custom" class="wiz-q-custom-check" data-target="wiz-phrases-task-questions" data-capsule="wiz-phrases-task-capsule" data-btn-all="wiz-phrases-task-btn-all" data-custom-label="wiz-phrases-task-custom-label" data-color="#FF8C00" data-rgb="255,140,0" ${isPhrasesTaskCustom ? 'checked' : ''} style="cursor:pointer; accent-color:#FF8C00; width:13px; height:13px; margin:0;" />
+                        <input type="number" id="wiz-phrases-task-questions" class="wiz-q-num-input" data-check="wiz-phrases-task-custom" value="${phrasesTaskNum}" min="1" max="200" ${!isPhrasesTaskCustom ? 'disabled' : ''} style="height:26px; width:36px; text-align:center; font-size:12px; font-weight:800; background:transparent; border:none; color:${isPhrasesTaskCustom ? '#ffffff' : '#64748b'}; padding:0; outline:none; ${!isPhrasesTaskCustom ? 'opacity:0.4;' : ''}" />
                       </label>
                     </div>
                   </div>
                   <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
-                    <select id="wiz-phrases-task-answer" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
+                    <select id="wiz-phrases-task-answer" style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
                       <option value="spoken" ${(s.phrasesTaskAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken</option>
                       <option value="selection" ${(s.phrasesTaskAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition</option>
                       <option value="written" ${(s.phrasesTaskAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written</option>
@@ -897,15 +897,15 @@ export async function openVocabularySystemModal(options = {}) {
                   <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Pace / Question</label>
                   <div style="display:flex; align-items:center; gap:10px;">
                     <div style="display:inline-flex; align-items:center; background:#090d16; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:0 8px; height:30px; width:62px; box-sizing:border-box;">
-                      <input type="number" id="wiz-phrases-task-pace" value="${s.phrasesTaskPace || 20}" min="5" max="60" ${!activeClass.hasPhrases ? 'disabled' : ''} style="width:32px; border:none; background:transparent; color:#ffffff; font-size:12px; font-weight:800; text-align:center; padding:0;" />
+                      <input type="number" id="wiz-phrases-task-pace" value="${s.phrasesTaskPace || 20}" min="5" max="60" style="width:32px; border:none; background:transparent; color:#ffffff; font-size:12px; font-weight:800; text-align:center; padding:0;" />
                       <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
                     </div>
                     <div style="display:flex; gap:5px;">
-                      ${[10, 15, 20, 25, 30].map(v => `<button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesTaskPace || 20) === v ? 'active' : ''}" data-target="wiz-phrases-task-pace" data-val="${v}" ${!activeClass.hasPhrases ? 'disabled' : ''}>${v}s</button>`).join('')}
+                      ${[10, 15, 20, 25, 30].map(v => `<button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesTaskPace || 20) === v ? 'active' : ''}" data-target="wiz-phrases-task-pace" data-val="${v}">${v}s</button>`).join('')}
                     </div>
                   </div>
                 </div>
-              </div>
+              </div>` : ''}
             </div>
           </div>
 
@@ -956,7 +956,7 @@ export async function openVocabularySystemModal(options = {}) {
             </div>
 
             <!-- Horizontal Side-by-Side: Words Exam & Phrases Exam -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="display:grid; grid-template-columns:${activeClass.hasPhrases ? '1fr 1fr' : '1fr'}; gap:10px;">
               <!-- Sub-Card: Words Periodic Exam -->
               <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px;">
                 <div style="display:flex; align-items:center; justify-content:space-between;">
@@ -1005,12 +1005,12 @@ export async function openVocabularySystemModal(options = {}) {
                 </div>
               </div>
 
-              <!-- Sub-Card: Phrases Periodic Exam -->
-              <div style="background:rgba(0,0,0,0.3); border:1px solid ${activeClass.hasPhrases ? 'rgba(255,140,0,0.2)' : 'rgba(255,255,255,0.05)'}; border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px; opacity:${activeClass.hasPhrases ? '1' : '0.45'};">
+              ${activeClass.hasPhrases ? `<!-- Sub-Card: Phrases Periodic Exam -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,140,0,0.2); border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px;">
                 <div style="display:flex; align-items:center; justify-content:space-between;">
                   <span style="font-size:13px; font-weight:800; color:#f8fafc;">Phrases Periodic Exam (Phrase)</span>
                   <div style="font-size:12px; color:#94a3b8; font-weight:600;">
-                    Duration: <strong id="wiz-phrases-exam-dur-display" style="color:#FF8C00; font-size:13px; font-weight:800;">${activeClass.hasPhrases ? (s.phrasesExamDur || 10) : 0}m</strong>
+                    Duration: <strong id="wiz-phrases-exam-dur-display" style="color:#FF8C00; font-size:13px; font-weight:800;">${s.phrasesExamDur || 10}m</strong>
                   </div>
                 </div>
 
@@ -1018,18 +1018,18 @@ export async function openVocabularySystemModal(options = {}) {
                 <div style="display:grid; grid-template-columns:115px 1fr; gap:10px; align-items:center;">
                   <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Questions</label>
-                    <div class="wiz-q-capsule" id="wiz-phrases-exam-capsule" style="display:inline-flex; align-items:center; height:30px; background:#090d16; border:1px solid ${isPhrasesExamCustom && activeClass.hasPhrases ? '#FF8C00' : 'rgba(255,255,255,0.2)'}; border-radius:4px; overflow:hidden; box-sizing:border-box; opacity:${activeClass.hasPhrases ? '1' : '0.5'};">
-                      <button type="button" class="wiz-q-btn-all" id="wiz-phrases-exam-btn-all" data-target-check="wiz-phrases-exam-custom" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:100%; border:none; padding:0 10px; font-size:12px; font-weight:${!isPhrasesExamCustom ? '800' : '700'}; cursor:pointer; background:${!isPhrasesExamCustom && activeClass.hasPhrases ? 'rgba(255,140,0,0.25)' : 'transparent'}; color:${!isPhrasesExamCustom && activeClass.hasPhrases ? '#FF8C00' : '#64748b'}; transition:all 0.12s ease;">ALL</button>
+                    <div class="wiz-q-capsule" id="wiz-phrases-exam-capsule" style="display:inline-flex; align-items:center; height:30px; background:#090d16; border:1px solid ${isPhrasesExamCustom ? '#FF8C00' : 'rgba(255,255,255,0.2)'}; border-radius:4px; overflow:hidden; box-sizing:border-box;">
+                      <button type="button" class="wiz-q-btn-all" id="wiz-phrases-exam-btn-all" data-target-check="wiz-phrases-exam-custom" style="height:100%; border:none; padding:0 10px; font-size:12px; font-weight:${!isPhrasesExamCustom ? '800' : '700'}; cursor:pointer; background:${!isPhrasesExamCustom ? 'rgba(255,140,0,0.25)' : 'transparent'}; color:${!isPhrasesExamCustom ? '#FF8C00' : '#64748b'}; transition:all 0.12s ease;">ALL</button>
                       <div style="width:1px; height:18px; background:rgba(255,255,255,0.12);"></div>
-                      <label id="wiz-phrases-exam-custom-label" style="display:inline-flex; align-items:center; height:100%; padding:0 6px; gap:4px; cursor:pointer; background:${isPhrasesExamCustom && activeClass.hasPhrases ? 'rgba(255,140,0,0.12)' : 'transparent'}; transition:all 0.12s ease;" title="Check to set custom question count">
-                        <input type="checkbox" id="wiz-phrases-exam-custom" class="wiz-q-custom-check" data-target="wiz-phrases-exam-questions" data-capsule="wiz-phrases-exam-capsule" data-btn-all="wiz-phrases-exam-btn-all" data-custom-label="wiz-phrases-exam-custom-label" data-color="#FF8C00" data-rgb="255,140,0" ${!activeClass.hasPhrases ? 'disabled' : ''} ${isPhrasesExamCustom && activeClass.hasPhrases ? 'checked' : ''} style="cursor:pointer; accent-color:#FF8C00; width:13px; height:13px; margin:0;" />
-                        <input type="number" id="wiz-phrases-exam-questions" class="wiz-q-num-input" data-check="wiz-phrases-exam-custom" value="${phrasesExamNum}" min="1" max="200" ${!activeClass.hasPhrases || !isPhrasesExamCustom ? 'disabled' : ''} style="height:26px; width:36px; text-align:center; font-size:12px; font-weight:800; background:transparent; border:none; color:${isPhrasesExamCustom && activeClass.hasPhrases ? '#ffffff' : '#64748b'}; padding:0; outline:none; ${!isPhrasesExamCustom || !activeClass.hasPhrases ? 'opacity:0.4;' : ''}" />
+                      <label id="wiz-phrases-exam-custom-label" style="display:inline-flex; align-items:center; height:100%; padding:0 6px; gap:4px; cursor:pointer; background:${isPhrasesExamCustom ? 'rgba(255,140,0,0.12)' : 'transparent'}; transition:all 0.12s ease;" title="Check to set custom question count">
+                        <input type="checkbox" id="wiz-phrases-exam-custom" class="wiz-q-custom-check" data-target="wiz-phrases-exam-questions" data-capsule="wiz-phrases-exam-capsule" data-btn-all="wiz-phrases-exam-btn-all" data-custom-label="wiz-phrases-exam-custom-label" data-color="#FF8C00" data-rgb="255,140,0" ${isPhrasesExamCustom ? 'checked' : ''} style="cursor:pointer; accent-color:#FF8C00; width:13px; height:13px; margin:0;" />
+                        <input type="number" id="wiz-phrases-exam-questions" class="wiz-q-num-input" data-check="wiz-phrases-exam-custom" value="${phrasesExamNum}" min="1" max="200" ${!isPhrasesExamCustom ? 'disabled' : ''} style="height:26px; width:36px; text-align:center; font-size:12px; font-weight:800; background:transparent; border:none; color:${isPhrasesExamCustom ? '#ffffff' : '#64748b'}; padding:0; outline:none; ${!isPhrasesExamCustom ? 'opacity:0.4;' : ''}" />
                       </label>
                     </div>
                   </div>
                   <div>
                     <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
-                    <select id="wiz-phrases-exam-answer" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
+                    <select id="wiz-phrases-exam-answer" style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
                       <option value="selection" ${(s.phrasesExamAnswer || 'selection') === 'selection' ? 'selected' : ''}>Recognition</option>
                       <option value="spoken" ${(s.phrasesExamAnswer || 'selection') === 'spoken' ? 'selected' : ''}>Spoken</option>
                       <option value="written" ${(s.phrasesExamAnswer || 'selection') === 'written' ? 'selected' : ''}>Written</option>
@@ -1043,15 +1043,15 @@ export async function openVocabularySystemModal(options = {}) {
                   <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Pace / Question</label>
                   <div style="display:flex; align-items:center; gap:10px;">
                     <div style="display:inline-flex; align-items:center; background:#090d16; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:0 8px; height:30px; width:62px; box-sizing:border-box;">
-                      <input type="number" id="wiz-phrases-exam-pace" value="${s.phrasesExamPace || 20}" min="5" max="60" ${!activeClass.hasPhrases ? 'disabled' : ''} style="width:32px; border:none; background:transparent; color:#ffffff; font-size:12px; font-weight:800; text-align:center; padding:0;" />
+                      <input type="number" id="wiz-phrases-exam-pace" value="${s.phrasesExamPace || 20}" min="5" max="60" style="width:32px; border:none; background:transparent; color:#ffffff; font-size:12px; font-weight:800; text-align:center; padding:0;" />
                       <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
                     </div>
                     <div style="display:flex; gap:5px;">
-                      ${[10, 15, 20, 25, 30].map(v => `<button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesExamPace || 20) === v ? 'active' : ''}" data-target="wiz-phrases-exam-pace" data-val="${v}" ${!activeClass.hasPhrases ? 'disabled' : ''}>${v}s</button>`).join('')}
+                      ${[10, 15, 20, 25, 30].map(v => `<button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesExamPace || 20) === v ? 'active' : ''}" data-target="wiz-phrases-exam-pace" data-val="${v}">${v}s</button>`).join('')}
                     </div>
                   </div>
                 </div>
-              </div>
+              </div>` : ''}
             </div>
           </div>
 

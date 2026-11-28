@@ -1587,16 +1587,14 @@ export function getGradeColorByScore(percentage, options = {}) {
     : String(options?.institution || options?.tenant || options?.instCode || '').toUpperCase();
 
   if (inst === 'TOP' || (typeof options === 'object' && options?.isTop)) {
-    if (p >= 100) return TOPSCORE_COLORS.STAR;
-    if (p >= 90) return TOPSCORE_COLORS.A;
+    if (p >= 90) return TOPSCORE_COLORS.A; // 90%–100% uses Pure Green; purple is reserved for ★ and Result LEGEND
     if (p >= 70) return TOPSCORE_COLORS.B;
     if (p >= 60) return TOPSCORE_COLORS.C;
     if (p >= 30) return TOPSCORE_COLORS.D;
     return TOPSCORE_COLORS.E;
   }
 
-  if (p >= 100) return TOPSCORE_COLORS.STAR;
-  if (p >= 90) return TOPSCORE_COLORS.A;
+  if (p >= 90) return TOPSCORE_COLORS.A; // 90%–100% uses Pure Green; purple is reserved for ★ and Result LEGEND
   if (p >= 80) return TOPSCORE_COLORS.B;
   if (p >= 70) return TOPSCORE_COLORS.C;
   if (p >= 60) return TOPSCORE_COLORS.D;

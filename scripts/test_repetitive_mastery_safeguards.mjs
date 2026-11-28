@@ -376,4 +376,27 @@ assert(breakdownMatches.length >= 2, 'dashboard.js must call resolveUnifiedExamA
 
 console.log('  ✔ Pillar 10: Unified Exam 200Q decomposition SSOT & dashboard Hero/TESTS sync verified');
 
-console.log('\n✅ ALL 10 REPETITIVE MASTERY & EXAM ISOLATION SAFEGUARDS PASSED WITH 100% SUCCESS!\n');
+// =========================================================================
+// PILLAR 11: Dynamic Task Repetitions Eligibility SSOT (Zero Hardcoded 7/14)
+// =========================================================================
+const testsAccessContent = fs.readFileSync('js/admin/tests-access.js', 'utf8');
+assert(
+  testsAccessContent.includes('fetchClassTestSettings(classId)'),
+  'tests-access.js renderClassTestSessions must fetch classTestSettings dynamically'
+);
+assert(
+  !/const\s+reqPasses\s*=\s*isNonVocab\s*\?\s*1\s*:\s*7\s*;/.test(testsAccessContent),
+  'tests-access.js must NOT hardcode reqPasses = isNonVocab ? 1 : 7'
+);
+assert(
+  !/wPass\s*>=\s*7\s*&&\s*pPass\s*>=\s*7/.test(testsAccessContent),
+  'tests-access.js must NOT hardcode wPass >= 7 && pPass >= 7'
+);
+assert(
+  testsAccessContent.includes('compTargetReps') && testsAccessContent.includes('taskRepetitions'),
+  'tests-access.js evaluateStudentsEligibility must derive compTargetReps from task/classTestSettings'
+);
+
+console.log('  ✔ Pillar 11: Dynamic task_repetitions eligibility SSOT in tests-access.js verified');
+
+console.log('\n✅ ALL 11 REPETITIVE MASTERY & EXAM ISOLATION SAFEGUARDS PASSED WITH 100% SUCCESS!\n');

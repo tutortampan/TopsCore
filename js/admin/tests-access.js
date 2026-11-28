@@ -282,7 +282,8 @@ export function buildClassThemesData(classTests = [], context = {}, selectedBatc
         examTest,
         classTests,
         allAttempts,
-        mode: 'normal'
+        mode: 'normal',
+        classTestSettings: context.classTestSettings || null
       });
       const eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
 
@@ -295,7 +296,8 @@ export function buildClassThemesData(classTests = [], context = {}, selectedBatc
         examTest,
         classTests,
         allAttempts,
-        mode: 'remedial'
+        mode: 'remedial',
+        classTestSettings: context.classTestSettings || null
       });
       const eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
 
@@ -396,7 +398,8 @@ export function buildClassThemesData(classTests = [], context = {}, selectedBatc
         examTest: t,
         classTests,
         allAttempts,
-        mode: 'normal'
+        mode: 'normal',
+        classTestSettings: context.classTestSettings || null
       });
       themeObj.eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
       themeObj.normalEvals = normalEvals;
@@ -410,7 +413,8 @@ export function buildClassThemesData(classTests = [], context = {}, selectedBatc
         examTest: t,
         classTests,
         allAttempts,
-        mode: 'remedial'
+        mode: 'remedial',
+        classTestSettings: context.classTestSettings || null
       });
       themeObj.eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
       themeObj.remedialEvals = remedialEvals;
@@ -755,6 +759,10 @@ export async function renderClassTestSessions(container, context = {}) {
     batchMap = {},
     levelMap = {}
   } = context;
+
+  if (!context.classTestSettings && classId && typeof window.fetchClassTestSettings === 'function') {
+    context.classTestSettings = await window.fetchClassTestSettings(classId).catch(() => null);
+  }
 
   // Program isolation: determine current class's program_id
   const classProgramId = currentClass?.program_id ||
@@ -1767,6 +1775,9 @@ function resolveLiveVaultBreakdown(testObj, context) {
     const idx = allThemes.indexOf(String(pl.theme_code).toUpperCase());
     themes = idx >= 0 ? allThemes.slice(0, idx + 1) : [String(pl.theme_code).toUpperCase()];
   }
+  const cat = String(pl.category || testObj.category || '').toLowerCase();
+  const isExplicitWordsOnly = cat === 'words' && !pl.is_unified && !pl.is_unified_test;
+  const isExplicitPhrasesOnly = cat === 'phrases' && !pl.is_unified && !pl.is_unified_test;
   const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase'];
   let wCount = 0;
   let pCount = 0;
@@ -1775,8 +1786,11 @@ function resolveLiveVaultBreakdown(testObj, context) {
     if (Number(v.target_level) !== lvlNum) continue;
     if (themes && !themes.includes(String(v.theme_code || '').toUpperCase())) continue;
     const isPhr = phraseTypes.includes(String(v.word_type || '').toLowerCase()) || v.category === 'phrases';
-    if (isPhr) pCount++;
-    else wCount++;
+    if (isPhr) {
+      if (!isExplicitWordsOnly) pCount++;
+    } else {
+      if (!isExplicitPhrasesOnly) wCount++;
+    }
   }
   if (wCount + pCount === 0) return null;
   return { wCount, pCount, total: wCount + pCount };
@@ -1814,8 +1828,10 @@ function renderThemeCard(theme, context) {
   const isNonVocab = Boolean(theme.isNonVocab);
   const examKey = getExamItemKey(theme);
   const liveBreakdown = !isNonVocab ? resolveLiveVaultBreakdown(examTest, context) : null;
-  const wordsQ = wordsTest?.total_questions || wordsTest?.payload?.total_questions || (Array.isArray(wordsTest?.questions) ? wordsTest.questions.length : 0);
-  const phrasesQ = phrasesTest?.total_questions || phrasesTest?.payload?.total_questions || (Array.isArray(phrasesTest?.questions) ? phrasesTest.questions.length : 0);
+  const liveWordsBreakdown = (!isNonVocab && !examTest && wordsTest) ? resolveLiveVaultBreakdown(wordsTest, context) : null;
+  const livePhrasesBreakdown = (!isNonVocab && !examTest && phrasesTest) ? resolveLiveVaultBreakdown(phrasesTest, context) : null;
+  const wordsQ = liveWordsBreakdown ? liveWordsBreakdown.wCount : (wordsTest?.total_questions || wordsTest?.payload?.total_questions || (Array.isArray(wordsTest?.questions) ? wordsTest.questions.length : 0));
+  const phrasesQ = livePhrasesBreakdown ? livePhrasesBreakdown.pCount : (phrasesTest?.total_questions || phrasesTest?.payload?.total_questions || (Array.isArray(phrasesTest?.questions) ? phrasesTest.questions.length : 0));
   const examQ = liveBreakdown ? liveBreakdown.total : (examTest?.total_questions || examTest?.payload?.total_questions || (Array.isArray(examTest?.questions) ? examTest.questions.length : 0));
   const totalQ = isNonVocab ? (theme.totalQuestions || 20) : (examTest ? examQ : (wordsQ + phrasesQ));
 
@@ -1883,8 +1899,9 @@ function renderThemeCard(theme, context) {
     }
 
     const totalSeconds = (wCount * wPace) + (pCount * pPace);
-    const savedExamDur = (hasExam && examTest)
-      ? Number(examTest.working_duration_minutes || examTest?.payload?.working_duration_minutes || 0)
+    const primaryExam = examTest || wordsTest || phrasesTest;
+    const savedExamDur = primaryExam
+      ? Number(primaryExam.working_duration_minutes || primaryExam?.payload?.working_duration_minutes || 0)
       : 0;
     autoDur = savedExamDur > 0
       ? savedExamDur
@@ -2573,18 +2590,27 @@ function openThemeSessionModal(container, theme, mode, context, themesData = [])
         wCount = _examQ;
       }
     } else {
-      wCount = curTheme.wordsTest?.payload?.total_questions || curTheme.wordsTest?.total_questions || 0;
-      pCount = curTheme.phrasesTest?.payload?.total_questions || curTheme.phrasesTest?.total_questions || 0;
+      const wLive = resolveLiveVaultBreakdown(curTheme.wordsTest, context);
+      const pLive = resolveLiveVaultBreakdown(curTheme.phrasesTest, context);
+      wCount = wLive ? wLive.wCount : (curTheme.wordsTest?.payload?.total_questions || curTheme.wordsTest?.total_questions || 0);
+      pCount = pLive ? pLive.pCount : (curTheme.phrasesTest?.payload?.total_questions || curTheme.phrasesTest?.total_questions || 0);
+    }
+
+    if (phrasesModuleSelect && phrasesModuleSelect.parentElement && vocabModulesRow) {
+      const hasPhrasesInExam = pCount > 0 || Boolean(curTheme.phrasesTest);
+      phrasesModuleSelect.parentElement.style.display = hasPhrasesInExam ? '' : 'none';
+      vocabModulesRow.style.gridTemplateColumns = hasPhrasesInExam ? '1fr 1fr' : '1fr';
     }
 
     const totalSeconds = (wCount * wPace) + (pCount * pPace);
-    const savedExamDur = Number(curTheme.examTest?.working_duration_minutes || curTheme.examTest?.payload?.working_duration_minutes || 0);
+    const primaryExam = curTheme.examTest || curTheme.wordsTest || curTheme.phrasesTest;
+    const savedExamDur = Number(primaryExam?.working_duration_minutes || primaryExam?.payload?.working_duration_minutes || 0);
     const useExamSavedDur = !modal.dataset.modeChanged && savedExamDur > 0;
     const autoDur = useExamSavedDur
       ? savedExamDur
       : (totalSeconds > 0
           ? Math.max(5, Math.ceil(totalSeconds / 60))
-          : (curTheme.examTest?.working_duration_minutes || 45));
+          : (primaryExam?.working_duration_minutes || 45));
 
     const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
     if (_suggEl) {
@@ -2712,7 +2738,8 @@ function openThemeSessionModal(container, theme, mode, context, themesData = [])
       examTest: activeModalTheme.examTest,
       classTests: context.classTests || [],
       allAttempts: context.allAttempts || [],
-      mode
+      mode,
+      classTestSettings: context.classTestSettings || null
     });
     lastEvaluatedStudents = evaluated;
 
@@ -3133,7 +3160,8 @@ function openThemeLateModal(container, theme, context) {
     examTest: theme.examTest,
     classTests: context.classTests || [],
     allAttempts: context.allAttempts || [],
-    mode
+    mode,
+    classTestSettings: context.classTestSettings || null
   });
 
   const eligibleLateList = evaluated.filter(e => e.isEligible);
@@ -4388,13 +4416,26 @@ function evaluateStudentEligibility(themeOrObj, students, allAttempts, mode = 'n
  * Smart Eligibility Engine:
  * Evaluates whether students meet prerequisite tasks and prior exam status.
  */
-function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, examTest, classTests = [], allAttempts = [], mode }) {
+function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, examTest, classTests = [], allAttempts = [], mode, classTestSettings = null }) {
   const targetExam = examTest || theme?.examTest;
   const isNonVocab = Boolean(theme?.isNonVocab);
   const hasTargetExam = Boolean(targetExam);
   const testMap = Object.fromEntries((classTests || []).map(t => [t.id, t]));
   const results = [];
   const activeTasks = themeTasks || themeQuizzes || theme?.tasks || theme?.quizzes || [];
+
+  let resolvedSettings = classTestSettings;
+  if (!resolvedSettings && typeof window !== 'undefined' && window.localStorage) {
+    const cid = theme?.classId || targetExam?.class_id || activeTasks[0]?.class_id || classTests[0]?.class_id;
+    if (cid) {
+      try {
+        const cached = window.localStorage.getItem(`topscore_test_settings_${cid}`);
+        if (cached) resolvedSettings = JSON.parse(cached);
+      } catch (_) {}
+    }
+  }
+  const globalTargetReps = Math.max(1, Number(resolvedSettings?.taskRepetitions) || 7);
+  const taskMinScore = Number(resolvedSettings?.taskMinScore) || 60;
 
   students.forEach(student => {
     const studAtts = (allAttempts || []).filter(a => a.student_id === student.id);
@@ -4405,6 +4446,8 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
 
     if (activeTasks.length > 0) {
       for (const task of activeTasks) {
+        const rawTaskReps = Number(task?.payload?.task_repetitions || task?.required_repetitions || globalTargetReps) || 7;
+        const compTargetReps = rawTaskReps >= 14 ? Math.round(rawTaskReps / 2) : Math.max(1, rawTaskReps);
         const taskAtts = studAtts.filter(a => (a.test_id || a.Test_id) === task.id);
         const isUni = task.payload?.is_unified === true || task.category === 'unified' || (task.test_subtype && task.test_subtype.startsWith('UNIFIED'));
         const isForgiven = taskAtts.some(a => a.is_forgiven || a.is_manual_override);
@@ -4421,17 +4464,17 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
             if (mMatch) {
               const rawM = parseInt(mMatch[1], 10);
               const comp = (mMatch[3] || '').toUpperCase();
-              if (comp === 'PHRASES') pPass = Math.max(pPass, Math.min(7, rawM));
-              else if (comp === 'WORDS') wPass = Math.max(wPass, Math.min(7, rawM));
+              if (comp === 'PHRASES') pPass = Math.max(pPass, Math.min(compTargetReps, rawM));
+              else if (comp === 'WORDS') wPass = Math.max(wPass, Math.min(compTargetReps, rawM));
               else {
-                wPass = Math.max(wPass, Math.min(7, rawM));
-                pPass = Math.max(pPass, Math.min(7, rawM));
+                wPass = Math.max(wPass, Math.min(compTargetReps, rawM));
+                pPass = Math.max(pPass, Math.min(compTargetReps, rawM));
               }
             }
             const st = String(a.status || '').toLowerCase();
             const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
             const pct = parseFloat(a.effective_score ?? a.percentage ?? 0);
-            if (isSub && pct >= 60) {
+            if (isSub && pct >= taskMinScore) {
               const tQ = Number(a.total_questions || 0);
               const cCount = Number(a.correct_count || a.score || 0);
               const isPhr = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10 && tQ <= 20) || /PHRASES/i.test(fr);
@@ -4439,9 +4482,9 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
               else wPass++;
             }
           });
-          hasPassed = (wPass >= 7 && pPass >= 7) || (wPass + pPass >= 14);
+          hasPassed = (wPass >= compTargetReps && pPass >= compTargetReps) || (wPass + pPass >= compTargetReps * 2);
         } else {
-          const reqPasses = isNonVocab ? 1 : 7;
+          const reqPasses = isNonVocab ? 1 : compTargetReps;
           let passCount = 0;
           taskAtts.forEach(a => {
             const fr = String(a.forgiven_reason || '');
@@ -4452,7 +4495,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
             const st = String(a.status || '').toLowerCase();
             const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
             const pct = parseFloat(a.effective_score ?? a.percentage ?? 0);
-            if (isSub && pct >= 60) passCount++;
+            if (isSub && pct >= taskMinScore) passCount++;
           });
           hasPassed = passCount >= reqPasses;
         }
@@ -4564,24 +4607,42 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
       );
 
       if (isUnifiedExam) {
-        const wordsAtts = subE.filter(a => String(a.forgiven_reason || '').includes('[SECTION: WORDS]') || (Number(a.total_questions || 0) > 40 && Number(a.total_questions || 0) <= 160));
-        const phrasesAtts = subE.filter(a => String(a.forgiven_reason || '').includes('[SECTION: PHRASES]') || (Number(a.total_questions || 0) > 0 && Number(a.total_questions || 0) <= 40));
-        const fullAtts = subE.filter(a => Number(a.total_questions || 0) > 160);
+        const rawTc = String(theme?.code || targetExam?.payload?.theme_code || 'A').toUpperCase();
+        const expW = rawTc === 'B' ? 320 : rawTc === 'C' ? 480 : rawTc === 'D' ? 640 : 160;
+        const expP = expW / 4;
+
+        const wordsAtts = subE.filter(a => {
+          const fr = String(a.forgiven_reason || '');
+          const tQ = Number(a.total_questions || 0);
+          if (fr.includes('[SECTION: PHRASES]')) return false;
+          return fr.includes('[SECTION: WORDS]') || (tQ > expP && tQ <= expW);
+        });
+        const phrasesAtts = subE.filter(a => {
+          const fr = String(a.forgiven_reason || '');
+          const tQ = Number(a.total_questions || 0);
+          if (fr.includes('[SECTION: WORDS]')) return false;
+          return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= expP);
+        });
+        const fullAtts = subE.filter(a => {
+          const fr = String(a.forgiven_reason || '');
+          if (fr.includes('[SECTION: WORDS]') || fr.includes('[SECTION: PHRASES]')) return false;
+          return Number(a.total_questions || 0) > expW;
+        });
 
         const candidateWords = [];
         wordsAtts.forEach(a => candidateWords.push(parseFloat(a.percentage ?? 0)));
         fullAtts.forEach(a => {
-          const wSc = Math.min(160, Number(a.score || 0));
-          candidateWords.push((wSc / 160) * 100);
+          const wSc = Math.min(expW, Number(a.score || 0));
+          candidateWords.push((wSc / expW) * 100);
         });
         if (candidateWords.length > 0) wBestPct = Math.max(...candidateWords);
 
         const candidatePhrases = [];
         phrasesAtts.forEach(a => candidatePhrases.push(parseFloat(a.percentage ?? 0)));
         fullAtts.forEach(a => {
-          if (Number(a.score || 0) > 160) {
-            const pSc = Math.min(40, Number(a.score || 0) - 160);
-            candidatePhrases.push((pSc / 40) * 100);
+          if (Number(a.score || 0) > expW) {
+            const pSc = Math.min(expP, Number(a.score || 0) - expW);
+            candidatePhrases.push((pSc / expP) * 100);
           }
         });
         if (candidatePhrases.length > 0) pBestPct = Math.max(...candidatePhrases);
@@ -4596,9 +4657,9 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
         isFailed = hasAttempted && !isAlreadyPassed;
 
         if (hasTakenWords && hasTakenPhrases) {
-          const wPts = Math.round((wBestPct / 100) * 160);
-          const pPts = Math.round((pBestPct / 100) * 40);
-          avgScore = Math.round(((wPts + pPts) / 200) * 100);
+          const wPts = Math.round((wBestPct / 100) * expW);
+          const pPts = Math.round((pBestPct / 100) * expP);
+          avgScore = Math.round(((wPts + pPts) / (expW + expP)) * 100);
         } else if (hasTakenWords) {
           avgScore = Math.round(wBestPct);
         } else if (hasTakenPhrases) {

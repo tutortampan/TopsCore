@@ -173,7 +173,7 @@ setTimeout(purgeExternalBadges, 2000);
       circle.style.strokeDashoffset = circumference; // start empty
 
       circle.style.stroke = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR')
-        ? TOPSCORE_COLORS.STAR
+        ? TOPSCORE_COLORS.A
         : (typeof getGradeColor === 'function' ? getGradeColor(grade) : TOPSCORE_COLORS.B);
 
       const duration = 1400;
@@ -1134,15 +1134,19 @@ setTimeout(purgeExternalBadges, 2000);
         ptsEl.style.setProperty('text-shadow', 'none', 'important');
       }
 
-      // 5. Evaluation Word Card (Row 6 - 50px: EXCELLENT, GOOD, ENOUGH, etc.)
+      // 5. Evaluation Word Card (Row 6 - 50px: LEGEND, EXCELLENT, GOOD, ENOUGH, etc.)
+      // Purple is reserved exclusively for LEGEND on Result Page and ★ star symbol
       const motEl = document.getElementById('result-motivation-msg');
       if (motEl) {
+        const isLegend = motEl.textContent?.trim().toUpperCase() === 'LEGEND' || document.getElementById('result-predicate-text')?.textContent?.trim().toUpperCase() === 'LEGEND';
+        const motColor = isLegend ? (TOPSCORE_COLORS.LEGEND_GIMMICK || '#a855f7') : gradeColor;
+        const motRgb = isLegend ? (TOPSCORE_COLORS.LEGEND_GIMMICK_RGB || '168, 85, 247') : rgbColor;
         motEl.dataset.tier = currentTier;
-        motEl.style.setProperty('--tier-color', gradeColor);
-        motEl.style.setProperty('--tier-rgb', rgbColor);
-        motEl.style.borderColor = `rgba(${rgbColor}, 0.85)`;
+        motEl.style.setProperty('--tier-color', motColor);
+        motEl.style.setProperty('--tier-rgb', motRgb);
+        motEl.style.borderColor = `rgba(${motRgb}, 0.85)`;
         motEl.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
-        motEl.style.color = gradeColor;
+        motEl.style.color = motColor;
         motEl.style.textShadow = 'none';
       }
 
@@ -1190,7 +1194,7 @@ setTimeout(purgeExternalBadges, 2000);
         if (pendingPayload && pendingPayload.length > 0 && (attempt.status === 'auto_submitted' || isUnscored)) {
           try {
             showLoading('Finalizing and calculating your test score...');
-            await submitTest(attemptId, pendingPayload, { status: 'submitted' });
+            await submitTest(attemptId, pendingPayload, { status: 'submitted', answerRows: answers });
             sessionStorage.removeItem('topscore_fallback_payload_' + attemptId);
             localStorage.removeItem('topscore_local_answers_' + attemptId);
 
@@ -1530,9 +1534,9 @@ setTimeout(purgeExternalBadges, 2000);
         const isGradeSOr100 = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR');
         const currentTier = isGradeSOr100 ? '★' : grade;
         if (isGradeSOr100) {
-          gradeColor = TOPSCORE_COLORS.STAR;
+          gradeColor = TOPSCORE_COLORS.A; // 100% percentage & points use Pure Green; purple is reserved for ★ and LEGEND
         }
-        const rgbColor = TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`] || hexToRgbString(gradeColor);
+        const rgbColor = TOPSCORE_COLORS[`${isGradeSOr100 ? 'A' : grade}_RGB`] || hexToRgbString(gradeColor);
 
         // Guaranteed Clean Slate for Entrance Animation:
         // Tier glow and background particles are held until Step 5 (Grade Reveal / Stamp Impact)
@@ -1601,7 +1605,7 @@ setTimeout(purgeExternalBadges, 2000);
           const stampClass = (grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`;
           gradeStamp.className = `result-grade-stamp pure-stamp ${stampClass}`;
           gradeStamp.textContent = grade;
-          gradeStamp.style.color = gradeColor;
+          gradeStamp.style.color = (grade === '★' || grade === 'S') ? (TOPSCORE_COLORS.LEGEND_GIMMICK || TOPSCORE_COLORS.STAR) : gradeColor;
         }
 
         // 3. Percentage in Dual Score & Grade Card (Clean white text during count-up)
@@ -1967,17 +1971,18 @@ setTimeout(purgeExternalBadges, 2000);
         const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
         const isGradeS = (ag === '★' || ag === 'S' || ag === 'STAR');
         const displayGrade = isGradeS ? '★' : ag;
-        const gradeColor = isGradeS ? TOPSCORE_COLORS.STAR : (aTheme.hex || aTheme.color);
+        const pctColor = getGradeColorByScore(parseFloat(apct));
+        const gradeColor = isGradeS ? (TOPSCORE_COLORS.LEGEND_GIMMICK || TOPSCORE_COLORS.STAR) : (aTheme.hex || aTheme.color);
 
         return `
           <tr style="${isThis ? 'background:rgba(56,189,248,0.07);' : ''}">
             <td style="padding:8px 12px;font-size:12px;color:var(--clr-text-3);">${escapeHtml(dateStr)}</td>
-            <td style="padding:8px 12px;font-weight:700;color:${gradeColor};">${apct}%</td>
+            <td style="padding:8px 12px;font-weight:700;color:${pctColor};">${apct}%</td>
             <td style="padding:8px 12px;text-align:center;">
               <span style="font-weight:800;font-size:14px;color:${gradeColor};">${displayGrade}</span>
             </td>
             <td style="padding:8px 12px;">
-              ${isBestRow ? `<span style="font-size:12px;font-weight:700;color:${TOPSCORE_COLORS.STAR};">Best</span>` : ''}
+              ${isBestRow ? `<span style="font-size:12px;font-weight:700;color:${TOPSCORE_COLORS.A};">Best</span>` : ''}
               ${isThis ? '<span style="font-size:12px;color:#38bdf8;">&larr; This attempt</span>' : `<a href="result.html?attempt_id=${escapeHtml(a.id)}" style="font-size:12px;color:var(--clr-text-3);text-decoration:underline;">View</a>`}
             </td>
           </tr>

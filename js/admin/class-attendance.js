@@ -241,11 +241,9 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
       const totalRecorded = presentCount + excusedCount + sickCount + absentCount;
       const ratePct = totalRecorded > 0 ? Math.round((presentCount / totalRecorded) * 100) : 0;
       const rateColor = totalRecorded === 0 ? '#64748b' : (
-        ratePct === 100 ? 'var(--grade-star, #a855f7)' : (
-          ratePct >= 90 ? 'var(--grade-a, #00c000)' : (
-            ratePct >= 80 ? 'var(--grade-b, #95ff00)' : (
-              ratePct >= 60 ? 'var(--grade-c, #ffff00)' : 'var(--grade-e, #ff0000)'
-            )
+        ratePct >= 90 ? 'var(--grade-a, #00c000)' : (
+          ratePct >= 80 ? 'var(--grade-b, #95ff00)' : (
+            ratePct >= 60 ? 'var(--grade-c, #ffff00)' : 'var(--grade-e, #ff0000)'
           )
         )
       );
@@ -377,11 +375,9 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
           if (sumRate) {
             sumRate.textContent = rTot > 0 ? rPct + '%' : '—';
             sumRate.style.color = rTot === 0 ? '#64748b' : (
-              rPct === 100 ? 'var(--grade-star, #a855f7)' : (
-                rPct >= 90 ? 'var(--grade-a, #00c000)' : (
-                  rPct >= 80 ? 'var(--grade-b, #95ff00)' : (
-                    rPct >= 60 ? 'var(--grade-c, #ffff00)' : 'var(--grade-e, #ff0000)'
-                  )
+              rPct >= 90 ? 'var(--grade-a, #00c000)' : (
+                rPct >= 80 ? 'var(--grade-b, #95ff00)' : (
+                  rPct >= 60 ? 'var(--grade-c, #ffff00)' : 'var(--grade-e, #ff0000)'
                 )
               )
             );
@@ -736,11 +732,9 @@ export async function renderBatchAttendance(container, context = {}) {
       // Overall Recap Calculation
       const ratePct = allWeeksTotalRecorded > 0 ? Math.round((allWeeksTotalPresent / allWeeksTotalRecorded) * 100) : 0;
       const rateColor = allWeeksTotalRecorded === 0 ? '#64748b' : (
-        ratePct === 100 ? 'var(--grade-star, #a855f7)' : (
-          ratePct >= 90 ? 'var(--grade-a, #00c000)' : (
-            ratePct >= 80 ? 'var(--grade-b, #95ff00)' : (
-              ratePct >= 60 ? 'var(--grade-c, #ffff00)' : 'var(--grade-e, #ff0000)'
-            )
+        ratePct >= 90 ? 'var(--grade-a, #00c000)' : (
+          ratePct >= 80 ? 'var(--grade-b, #95ff00)' : (
+            ratePct >= 60 ? 'var(--grade-c, #ffff00)' : 'var(--grade-e, #ff0000)'
           )
         )
       );

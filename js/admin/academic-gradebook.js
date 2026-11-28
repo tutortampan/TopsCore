@@ -61,7 +61,7 @@ function resolveClassSubjectAndStep(currentClass, levelMap = {}) {
 function getMinMaxCellColor(raw, min, max) {
   if (raw === '' || raw === null || raw === undefined || isNaN(Number(raw))) return 'var(--clr-text-3)';
   const val = Number(raw);
-  if (max != null && val >= max) return 'var(--grade-star, #a855f7)';
+  if (max != null && val >= max) return 'var(--grade-a, #00c000)';
   if (min != null) {
     if (val < min) return 'var(--grade-e, #ff0000)';
     // Borderline / pas-pasan: exactly at MIN or within 10% above MIN
